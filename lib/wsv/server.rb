@@ -190,10 +190,23 @@ module Wsv
       ssl.sync_close = true
       ssl.accept
       ssl
+    rescue StandardError
+      # If wrapping or the handshake failed, `handle` is never called and
+      # its ensure does not get a chance to close the underlying socket.
+      # Close it here so we do not leak a TCPSocket per failed handshake.
+      begin
+        client.close
+      rescue StandardError
+        nil
+      end
+      raise
     end
 
     def reject(client)
-      write_response(client, Response.text(503))
+      # In TLS mode `client` is the raw TCPSocket before any handshake.
+      # Writing a plaintext 503 over it would corrupt the TLS handshake
+      # the client is about to start, so just close in that case.
+      write_response(client, Response.text(503)) unless @ssl_context
     ensure
       graceful_close(client)
     end
