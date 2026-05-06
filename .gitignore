@@ -1,0 +1,22 @@
+*.gem
+*.rbc
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+
+# Bundler
+/Gemfile.lock
+/vendor/bundle/
+
+# IDE / editors
+/.idea/
+/.vscode/
+/.ruby-lsp/
+*.swp
+*.swo
+.DS_Store
