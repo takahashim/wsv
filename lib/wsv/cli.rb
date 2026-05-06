@@ -55,7 +55,7 @@ module Wsv
           options[:port] = validate_port(port)
         end
 
-        opts.on("--tls", "Enable HTTPS (uses ~/.config/wsv/cert.pem if present, else self-signed)") do
+        opts.on("--tls", "Enable HTTPS (uses ~/.config/wsv/{cert,key}.pem if both present, else self-signed)") do
           options[:tls] = true
         end
 
