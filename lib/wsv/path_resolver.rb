@@ -50,21 +50,27 @@ module Wsv
       return Result.error(403) if hidden_segment?(relative)
 
       candidate = File.expand_path(relative, @root)
-      return Result.error(403) unless within_root?(candidate)
+      return Result.error(403) unless within?(candidate)
       return Result.error(404) unless File.exist?(candidate)
 
-      if File.directory?(candidate)
+      real = File.realpath(candidate)
+      return Result.error(403) unless within?(real)
+      return Result.error(403) if hidden_under_root?(real)
+
+      if File.directory?(real)
         return Result.redirect unless decoded.end_with?("/")
 
-        index = File.join(candidate, "index.html")
+        index = File.join(real, "index.html")
         return Result.error(404) unless File.file?(index)
 
         return Result.file(index)
       end
 
-      return Result.error(404) unless File.file?(candidate)
+      return Result.error(404) unless File.file?(real)
 
-      Result.file(candidate)
+      Result.file(real)
+    rescue Errno::ENOENT, Errno::ELOOP, Errno::EACCES
+      Result.error(404)
     end
 
     private
@@ -92,16 +98,14 @@ module Wsv
       end
     end
 
-    def within_root?(path)
-      real = if File.exist?(path)
-        File.realpath(path)
-      else
-        File.expand_path(path)
-      end
+    def within?(path)
+      path == @root || path.start_with?("#{@root}#{File::SEPARATOR}")
+    end
 
-      real == @root || real.start_with?("#{@root}#{File::SEPARATOR}")
-    rescue Errno::ENOENT
-      File.expand_path(path).start_with?("#{@root}#{File::SEPARATOR}")
+    def hidden_under_root?(real)
+      return false if real == @root
+
+      hidden_segment?(real[(@root.length + 1)..])
     end
   end
 end

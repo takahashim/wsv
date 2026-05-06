@@ -127,6 +127,47 @@ class PathResolverTest < Minitest::Test
     assert_equal 400, result.status
   end
 
+  def test_rejects_symlink_to_dotfile
+    File.write(File.join(@dir, ".env"), "secret")
+    File.symlink(".env", File.join(@dir, "config"))
+
+    result = @resolver.resolve("/config")
+
+    assert result.error?
+    assert_equal 403, result.status
+  end
+
+  def test_rejects_symlink_to_dot_directory
+    FileUtils.mkdir_p(File.join(@dir, ".git"))
+    File.write(File.join(@dir, ".git", "HEAD"), "ref")
+    File.symlink(".git", File.join(@dir, "gitstuff"))
+
+    result = @resolver.resolve("/gitstuff/HEAD")
+
+    assert result.error?
+    assert_equal 403, result.status
+  end
+
+  def test_allows_internal_symlink_to_regular_file
+    File.write(File.join(@dir, "real.txt"), "data")
+    File.symlink("real.txt", File.join(@dir, "alias.txt"))
+
+    result = @resolver.resolve("/alias.txt")
+
+    assert result.file?
+    assert_equal File.realpath(File.join(@dir, "real.txt")), result.file
+  end
+
+  def test_handles_symlink_loop
+    File.symlink("b", File.join(@dir, "a"))
+    File.symlink("a", File.join(@dir, "b"))
+
+    result = @resolver.resolve("/a")
+
+    assert result.error?
+    assert_equal 404, result.status
+  end
+
   def test_rejects_symlink_outside_root
     outside = File.join(File.dirname(@dir), "wsv-outside-#{$$}")
     File.write(outside, "leaked")
