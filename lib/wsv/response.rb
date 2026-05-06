@@ -2,20 +2,12 @@
 
 require "time"
 require_relative "mime_types"
+require_relative "status"
 require_relative "version"
 
 module Wsv
   class Response
     SERVER_NAME = "wsv/#{Wsv::VERSION}"
-
-    REASONS = {
-      200 => "OK",
-      301 => "Moved Permanently",
-      400 => "Bad Request",
-      403 => "Forbidden",
-      404 => "Not Found",
-      405 => "Method Not Allowed"
-    }.freeze
 
     attr_reader :status, :headers, :body
 
@@ -26,7 +18,7 @@ module Wsv
     end
 
     def reason
-      REASONS.fetch(status)
+      Status.reason(status)
     end
 
     def write_to(io)
@@ -39,7 +31,7 @@ module Wsv
     end
 
     def self.text(status, headers: {}, head: false)
-      body = "#{status} #{REASONS.fetch(status)}\n"
+      body = "#{status} #{Status.reason(status)}\n"
       base = {
         "Content-Type" => "text/plain; charset=utf-8",
         "Content-Length" => body.bytesize.to_s,

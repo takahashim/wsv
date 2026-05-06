@@ -66,13 +66,6 @@ class PathResolverTest < Minitest::Test
     assert_equal 403, result.status
   end
 
-  def test_rejects_url_encoded_traversal
-    result = @resolver.resolve("/%2e%2e/etc/passwd")
-
-    assert result.error?
-    assert_equal 403, result.status
-  end
-
   def test_rejects_dotfile_at_root
     File.write(File.join(@dir, ".env"), "secret")
 
@@ -102,6 +95,29 @@ class PathResolverTest < Minitest::Test
     assert_equal 403, result.status
   end
 
+  def test_rejects_url_encoded_traversal
+    result = @resolver.resolve("/%2e%2e/etc/passwd")
+
+    assert result.error?
+    assert_equal 403, result.status
+  end
+
+  def test_rejects_url_encoded_dotfile
+    File.write(File.join(@dir, ".env"), "secret")
+
+    result = @resolver.resolve("/%2eenv")
+
+    assert result.error?
+    assert_equal 403, result.status
+  end
+
+  def test_returns_400_for_invalid_uri
+    result = @resolver.resolve("http://[invalid")
+
+    assert result.error?
+    assert_equal 400, result.status
+  end
+
   def test_rejects_symlink_outside_root
     outside = File.join(File.dirname(@dir), "wsv-outside-#{$$}")
     File.write(outside, "leaked")
@@ -115,10 +131,4 @@ class PathResolverTest < Minitest::Test
     FileUtils.rm_f(outside) if outside
   end
 
-  def test_returns_400_for_invalid_uri
-    result = @resolver.resolve("http://[invalid")
-
-    assert result.error?
-    assert_equal 400, result.status
-  end
 end

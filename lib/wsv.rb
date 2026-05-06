@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "wsv/version"
+require_relative "wsv/status"
 require_relative "wsv/mime_types"
 require_relative "wsv/path_resolver"
 require_relative "wsv/request"

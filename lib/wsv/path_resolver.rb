@@ -71,7 +71,7 @@ module Wsv
     private
 
     def decode(raw_path)
-      path = URI(raw_path).path
+      path = URI(raw_path.to_s).path
       CGI.unescape(path)
     rescue ArgumentError, URI::InvalidURIError
       nil
