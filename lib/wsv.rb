@@ -7,6 +7,7 @@ require_relative "wsv/path_resolver"
 require_relative "wsv/request"
 require_relative "wsv/response"
 require_relative "wsv/app"
+require_relative "wsv/tls_context"
 require_relative "wsv/server"
 require_relative "wsv/cli"
 

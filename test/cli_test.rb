@@ -68,4 +68,31 @@ class CLITest < Minitest::Test
     assert_equal 1, code
     assert_includes err.string, "directory does not exist"
   end
+
+  def test_tls_flag_parses
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options(["--tls", dir])
+
+      assert options[:tls]
+    end
+  end
+
+  def test_cert_without_key_errors
+    err = StringIO.new
+    Dir.mktmpdir do |dir|
+      code = Wsv::CLI.new(["--cert", "/nonexistent/cert.pem", dir], err: err).run
+
+      assert_equal 1, code
+      assert_includes err.string, "must be provided together"
+    end
+  end
+
+  def test_cert_and_key_parses
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options(["--cert", "a.pem", "--key", "b.pem", dir])
+
+      assert_equal "a.pem", options[:cert]
+      assert_equal "b.pem", options[:key]
+    end
+  end
 end

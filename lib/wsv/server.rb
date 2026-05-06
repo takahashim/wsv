@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "openssl"
 require "socket"
 require_relative "app"
 require_relative "request"
@@ -20,7 +21,8 @@ module Wsv
       out: $stdout,
       err: $stderr,
       read_timeout: DEFAULT_READ_TIMEOUT,
-      max_connections: DEFAULT_MAX_CONNECTIONS
+      max_connections: DEFAULT_MAX_CONNECTIONS,
+      tls: nil
     )
       @host = host
       @port = port
@@ -29,6 +31,8 @@ module Wsv
       @err = err
       @read_timeout = read_timeout
       @max_connections = max_connections
+      @tls = tls
+      @ssl_context = tls&.to_ssl_context
       @app = App.new(@root)
       @running = false
       @mutex = Mutex.new
@@ -119,12 +123,12 @@ module Wsv
         @deadline = deadline
       end
 
-      def gets(limit)
+      def gets(eol, limit)
         remaining = @deadline - Time.now
         raise IO::TimeoutError if remaining <= 0
 
         @io.timeout = remaining
-        @io.gets(limit)
+        @io.gets(eol, limit)
       end
     end
 
@@ -167,7 +171,7 @@ module Wsv
       begin
         Thread.new do
           Thread.current.report_on_exception = false
-          handle(client)
+          handle(maybe_wrap_tls(client))
         ensure
           @mutex.synchronize { @active -= 1 }
         end
@@ -176,6 +180,16 @@ module Wsv
         @mutex.synchronize { @active -= 1 }
         reject(client)
       end
+    end
+
+    def maybe_wrap_tls(client)
+      return client unless @ssl_context
+
+      ssl = OpenSSL::SSL::SSLSocket.new(client, @ssl_context)
+      ssl.sync_close = true
+      ssl.timeout = @read_timeout
+      ssl.accept
+      ssl
     end
 
     def reject(client)
@@ -205,6 +219,7 @@ module Wsv
       @out.puts "Local:   #{url_for('127.0.0.1')}" unless localhost?(host)
       @out.puts "Stop:    Ctrl-C"
       warn_public_bind unless localhost?(host)
+      warn_ephemeral_cert if @tls&.ephemeral?
     end
 
     def warn_public_bind
@@ -212,8 +227,17 @@ module Wsv
       @err.puts "         Pass --host 127.0.0.1 (or omit --host) for local-only access."
     end
 
+    def warn_ephemeral_cert
+      @err.puts "WARNING: serving with a self-signed certificate. Browsers will"
+      @err.puts "         show a security warning. Pass --cert / --key for a real cert."
+    end
+
     def url_for(display_host)
-      "http://#{display_host}:#{port}/"
+      "#{scheme}://#{display_host}:#{port}/"
+    end
+
+    def scheme
+      @tls ? "https" : "http"
     end
 
     def localhost?(display_host)

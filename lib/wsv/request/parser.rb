@@ -13,7 +13,7 @@ module Wsv
       end
 
       def parse
-        line = @io.gets(REQUEST_LINE_LIMIT)
+        line = @io.gets("\n", REQUEST_LINE_LIMIT)
         return :empty unless line
         raise TooLarge, 414 if line.bytesize >= REQUEST_LINE_LIMIT && !line.end_with?("\n")
 
@@ -30,7 +30,7 @@ module Wsv
         headers = {}
         total = 0
         count = 0
-        while (line = @io.gets(HEADER_LINE_LIMIT))
+        while (line = @io.gets("\n", HEADER_LINE_LIMIT))
           raise TooLarge, 431 if line.bytesize >= HEADER_LINE_LIMIT && !line.end_with?("\n")
 
           stripped = line.delete_suffix("\r\n").delete_suffix("\n").delete_suffix("\r")

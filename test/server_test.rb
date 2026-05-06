@@ -253,6 +253,37 @@ class ServerTest < Minitest::Test
     assert_equal "304", response.code
   end
 
+  def test_serves_over_tls
+    File.write(File.join(@dir, "x.txt"), "secret")
+    start_server(tls: build_ephemeral_tls)
+
+    response = Net::HTTP.start("127.0.0.1", @server.port, use_ssl: true,
+                                                          verify_mode: OpenSSL::SSL::VERIFY_NONE) do |http|
+      http.get("/x.txt")
+    end
+
+    assert_equal "200", response.code
+    assert_equal "secret", response.body
+  end
+
+  def test_logs_https_scheme_when_tls_enabled
+    out = StringIO.new
+    @server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir,
+                              out: out, err: StringIO.new, tls: build_ephemeral_tls)
+    @server.send(:log_startup)
+
+    assert_includes out.string, "https://"
+  end
+
+  def test_warns_about_self_signed_cert
+    err = StringIO.new
+    @server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir,
+                              out: StringIO.new, err: err, tls: build_ephemeral_tls)
+    @server.send(:log_startup)
+
+    assert_includes err.string, "self-signed"
+  end
+
   def test_unsupported_method
     start_server
 
@@ -264,14 +295,15 @@ class ServerTest < Minitest::Test
 
   private
 
-  def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT)
+  def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT, tls: nil)
     @server = Wsv::Server.new(
       host: "127.0.0.1",
       port: free_port,
       root: @dir,
       out: StringIO.new,
       err: StringIO.new,
-      read_timeout: read_timeout
+      read_timeout: read_timeout,
+      tls: tls
     )
     @thread = Thread.new { @server.start }
     wait_until_ready
@@ -296,6 +328,12 @@ class ServerTest < Minitest::Test
     ensure
       close
     end
+  end
+
+  def build_ephemeral_tls
+    key = OpenSSL::PKey::RSA.new(2048)
+    cert = Wsv::TlsContext::SelfSignedCert.build(key)
+    Wsv::TlsContext.new(cert: cert, key: key, ephemeral: true)
   end
 
   def free_port
