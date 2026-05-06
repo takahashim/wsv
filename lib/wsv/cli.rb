@@ -105,6 +105,8 @@ module Wsv
       return nil unless options[:tls] || options[:cert] || options[:key]
 
       TlsContext::Resolver.resolve(cert_path: options[:cert], key_path: options[:key])
+    rescue OpenSSL::OpenSSLError => e
+      raise ArgumentError, "TLS configuration error: #{e.message}"
     end
   end
 end
