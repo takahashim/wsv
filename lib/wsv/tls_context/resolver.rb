@@ -32,10 +32,14 @@ module Wsv
       private
 
       def from_files(cert_path, key_path)
-        TlsContext.new(
-          cert: OpenSSL::X509::Certificate.new(File.read(cert_path)),
-          key: OpenSSL::PKey.read(File.read(key_path))
-        )
+        cert = OpenSSL::X509::Certificate.new(File.read(cert_path))
+        key = OpenSSL::PKey.read(File.read(key_path))
+        unless cert.check_private_key(key)
+          raise ArgumentError,
+                "TLS certificate at #{cert_path} does not match the key at #{key_path}"
+        end
+
+        TlsContext.new(cert: cert, key: key)
       end
 
       def ephemeral
