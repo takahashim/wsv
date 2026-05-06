@@ -164,11 +164,17 @@ module Wsv
 
       return reject(client) unless accepted
 
-      Thread.new do
-        Thread.current.report_on_exception = false
-        handle(client)
-      ensure
+      begin
+        Thread.new do
+          Thread.current.report_on_exception = false
+          handle(client)
+        ensure
+          @mutex.synchronize { @active -= 1 }
+        end
+      rescue ThreadError => e
+        @err.puts "wsv: thread error: #{e.message}"
         @mutex.synchronize { @active -= 1 }
+        reject(client)
       end
     end
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Decrement the in-flight connection counter when `Thread.new` itself raises
+  `ThreadError` (e.g. OS thread limit reached). The dispatch returns `503`
+  for the rejected client and the server continues accepting subsequent
+  connections instead of permanently leaking a slot.
 - Stream file responses through `IO.copy_stream` instead of buffering the
   whole file in memory. Reduces RSS for large files and uses `sendfile(2)`
   on Linux when available. `Response#body` still materializes to a String
