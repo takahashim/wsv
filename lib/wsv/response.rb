@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "time"
-require_relative "mime_types"
 require_relative "status"
 require_relative "version"
+require_relative "response/text_builder"
+require_relative "response/file_builder"
 
 module Wsv
   class Response
@@ -15,10 +15,7 @@ module Wsv
     attr_reader :status, :headers, :body
 
     def initialize(status:, headers: {}, body: "")
-      headers.each do |name, value|
-        raise ArgumentError, "invalid header name: #{name.inspect}" if name.to_s.match?(INVALID_HEADER_NAME)
-        raise ArgumentError, "invalid header value: #{value.inspect}" if value.to_s.match?(INVALID_HEADER_VALUE)
-      end
+      validate_headers(headers)
       @status = status
       @headers = headers
       @body = body
@@ -37,62 +34,33 @@ module Wsv
       io.write body
     end
 
-    def self.text(status, headers: {}, head: false)
-      body = "#{status} #{Status.reason(status)}\n"
-      base = {
-        "Content-Type" => "text/plain; charset=utf-8",
-        "Content-Length" => body.bytesize.to_s,
-        "Cache-Control" => "no-cache"
-      }
-      new(status: status, headers: base.merge(headers), body: head ? "" : body)
+    def self.text(status, **)
+      TextBuilder.new(status, **).build
     end
 
-    def self.file(path, head: false, range: nil)
-      size = File.size(path)
-      headers = {
-        "Content-Type" => MimeTypes.for_file(path),
-        "Last-Modified" => File.mtime(path).httpdate,
-        "Cache-Control" => "no-cache",
-        "Accept-Ranges" => "bytes"
-      }
-      if range
-        headers["Content-Length"] = range.size.to_s
-        headers["Content-Range"] = "bytes #{range.begin}-#{range.end}/#{size}"
-        new(status: 206, headers: headers, body: head ? "" : read_range(path, range))
-      else
-        headers["Content-Length"] = size.to_s
-        new(status: 200, headers: headers, body: head ? "" : File.binread(path))
-      end
+    def self.file(path, **)
+      FileBuilder.new(path, **).build
     end
 
-    def self.read_range(path, range)
-      File.open(path, "rb") do |f|
-        f.seek(range.begin)
-        f.read(range.size)
-      end
+    def self.redirect(location, head: false)
+      TextBuilder.new(301, head: head, headers: { "Location" => location }).build
     end
-    private_class_method :read_range
 
     def self.not_modified
       new(status: 304, headers: { "Cache-Control" => "no-cache" }, body: "")
     end
 
     def self.range_not_satisfiable(file_size, head: false)
-      body = "416 Range Not Satisfiable\n"
-      new(
-        status: 416,
-        headers: {
-          "Content-Type" => "text/plain; charset=utf-8",
-          "Content-Length" => body.bytesize.to_s,
-          "Content-Range" => "bytes */#{file_size}",
-          "Cache-Control" => "no-cache"
-        },
-        body: head ? "" : body
-      )
+      TextBuilder.new(416, head: head, headers: { "Content-Range" => "bytes */#{file_size}" }).build
     end
 
-    def self.redirect(location, head: false)
-      text(301, headers: { "Location" => location }, head: head)
+    private
+
+    def validate_headers(headers)
+      headers.each do |name, value|
+        raise ArgumentError, "invalid header name: #{name.inspect}" if name.to_s.match?(INVALID_HEADER_NAME)
+        raise ArgumentError, "invalid header value: #{value.inspect}" if value.to_s.match?(INVALID_HEADER_VALUE)
+      end
     end
   end
 end
