@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "time"
+require "uri"
 require_relative "path_resolver"
 require_relative "response"
 
@@ -93,9 +94,13 @@ module Wsv
     end
 
     def redirect_location(raw_path, query)
-      location = raw_path.end_with?("/") ? raw_path : "#{raw_path}/"
+      path = URI(raw_path.to_s).path
+      path = "/" if path.empty?
+      location = path.end_with?("/") ? path : "#{path}/"
       location += "?#{query}" if query && !query.empty?
       location
+    rescue URI::InvalidURIError
+      "/"
     end
   end
 end

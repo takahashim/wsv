@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Normalize the redirect `Location` to an origin-form path. Previously, an
+  absolute-form request target such as `GET http://example.test/docs HTTP/1.1`
+  produced `Location: http://example.test/docs/`; now it always emits
+  `Location: /docs/`.
+- Reject control characters (C0 0x00-0x1F and 0x7F DEL) in the
+  decoded request path with `400`. RFC 3986 disallows them in URL paths;
+  this prevents NUL-byte `ArgumentError` from leaking out of
+  `Wsv::PathResolver` and provides defence-in-depth against CR/LF
+  smuggling alongside the existing response-header validation.
+- Document the local-FS TOCTOU limitation in README's security model:
+  another local process with write access to the served directory can swap
+  files between path resolution and `File.open`. This is acknowledged as
+  out-of-scope for a development tool.
 - Decrement the in-flight connection counter when `Thread.new` itself raises
   `ThreadError` (e.g. OS thread limit reached). The dispatch returns `503`
   for the rejected client and the server continues accepting subsequent

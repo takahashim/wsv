@@ -60,6 +60,16 @@ class AppTest < Minitest::Test
     assert_equal "/docs/?q=1", response.headers["Location"]
   end
 
+  def test_redirect_normalizes_absolute_form_target_to_origin_form
+    FileUtils.mkdir_p(File.join(@dir, "docs"))
+    File.write(File.join(@dir, "docs", "index.html"), "x")
+
+    response = @app.call(req("GET", "http://example.test/docs"))
+
+    assert_equal 301, response.status
+    assert_equal "/docs/", response.headers["Location"]
+  end
+
   def test_head_omits_body_but_keeps_content_length
     File.write(File.join(@dir, "x.txt"), "hi")
 

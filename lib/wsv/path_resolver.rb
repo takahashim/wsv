@@ -4,6 +4,10 @@ require "uri"
 
 module Wsv
   class PathResolver
+    # RFC 3986 disallows control characters in URL paths. Reject them after
+    # percent-decoding so callers cannot smuggle CR/LF, NUL, etc. through.
+    INVALID_PATH_CHARS = /[\u0000-\u001f\u007f]/
+
     class Result
       attr_reader :status, :file
 
@@ -77,7 +81,10 @@ module Wsv
 
     def decode(raw_path)
       path = URI(raw_path.to_s).path
-      percent_decode(path)
+      decoded = percent_decode(path)
+      return nil if decoded.nil? || decoded.match?(INVALID_PATH_CHARS)
+
+      decoded
     rescue URI::InvalidURIError
       nil
     end

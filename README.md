@@ -89,6 +89,12 @@ Within that scope it tries to behave defensively:
 - HTTP keep-alive (each response sets `Connection: close`).
 - ETags / `If-None-Match`.
 - Production-grade DoS resistance under hostile network load.
+- Defend against TOCTOU attacks from other local processes that can write
+  to the served directory. Path resolution (canonicalisation, dotfile
+  checks, within-root verification) happens before each file is opened;
+  another process that can swap files in the served directory between
+  resolution and read could redirect a request elsewhere on the same
+  machine.
 - Protect a directory you should not be sharing in the first place. The
   bound is the directory you pass on the command line; if it contains
   secrets, do not run `wsv` against it.

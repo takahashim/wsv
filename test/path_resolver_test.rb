@@ -127,6 +127,41 @@ class PathResolverTest < Minitest::Test
     assert_equal 400, result.status
   end
 
+  def test_returns_400_for_nul_byte_in_path
+    result = @resolver.resolve("/foo%00bar")
+
+    assert_predicate result, :error?
+    assert_equal 400, result.status
+  end
+
+  def test_returns_400_for_cr_in_path
+    result = @resolver.resolve("/foo%0Dbar")
+
+    assert_predicate result, :error?
+    assert_equal 400, result.status
+  end
+
+  def test_returns_400_for_lf_in_path
+    result = @resolver.resolve("/foo%0Abar")
+
+    assert_predicate result, :error?
+    assert_equal 400, result.status
+  end
+
+  def test_returns_400_for_tab_in_path
+    result = @resolver.resolve("/foo%09bar")
+
+    assert_predicate result, :error?
+    assert_equal 400, result.status
+  end
+
+  def test_returns_400_for_del_in_path
+    result = @resolver.resolve("/foo%7Fbar")
+
+    assert_predicate result, :error?
+    assert_equal 400, result.status
+  end
+
   def test_rejects_symlink_to_dotfile
     File.write(File.join(@dir, ".env"), "secret")
     File.symlink(".env", File.join(@dir, "config"))
