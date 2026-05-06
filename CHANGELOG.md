@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0
+
+- TLS / HTTPS support via Ruby's built-in `openssl` (no extra gem dependency).
+  - `--tls` enables HTTPS. Without `--cert / --key`, wsv looks for
+    `~/.config/wsv/cert.pem` and `~/.config/wsv/key.pem` (respecting
+    `XDG_CONFIG_HOME`); if neither is present, an ephemeral self-signed
+    certificate is generated in memory and a warning is printed.
+  - `--cert PATH --key PATH` uses a user-supplied PEM cert / key pair and
+    implies `--tls`. Specifying only one of the two is an error.
+  - `~/.config/wsv/` (or `$XDG_CONFIG_HOME/wsv/`) is the recommended location
+    for mkcert-issued certificates: `mkcert -cert-file ~/.config/wsv/cert.pem
+    -key-file ~/.config/wsv/key.pem localhost 127.0.0.1 ::1`.
+  - The HTTP scheme in the startup banner switches to `https://` when TLS is
+    enabled.
+  - The TLS handshake honours the per-request read deadline, so slow-handshake
+    clients cannot hold a worker beyond the configured timeout.
+
 ## 0.9.0
 
 - Normalize the redirect `Location` to an origin-form path. Previously, an

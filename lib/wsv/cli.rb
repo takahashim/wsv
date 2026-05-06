@@ -21,7 +21,11 @@ module Wsv
       return 0 if options[:handled]
 
       root = resolve_root(options[:directory])
-      server = Server.new(host: options[:host], port: options[:port], root: root, out: @out, err: @err)
+      tls = resolve_tls(options)
+      server = Server.new(
+        host: options[:host], port: options[:port], root: root,
+        out: @out, err: @err, tls: tls
+      )
       server.start
       0
     rescue OptionParser::ParseError, ArgumentError => e
@@ -33,7 +37,7 @@ module Wsv
       1
     end
 
-    def parse_options(args)
+    def parse_options(args) # rubocop:disable Metrics/AbcSize
       options = {
         host: DEFAULT_HOST,
         port: DEFAULT_PORT,
@@ -49,6 +53,18 @@ module Wsv
 
         opts.on("-p", "--port PORT", Integer, "Bind port (default: #{DEFAULT_PORT})") do |port|
           options[:port] = validate_port(port)
+        end
+
+        opts.on("--tls", "Enable HTTPS (uses ~/.config/wsv/cert.pem if present, else self-signed)") do
+          options[:tls] = true
+        end
+
+        opts.on("--cert PATH", "TLS certificate file (PEM); implies --tls") do |path|
+          options[:cert] = path
+        end
+
+        opts.on("--key PATH", "TLS private key file (PEM); implies --tls") do |path|
+          options[:key] = path
         end
 
         opts.on("--help", "Show help") do
@@ -83,6 +99,12 @@ module Wsv
       raise ArgumentError, "port must be between 1 and 65535" unless port.between?(1, 65_535)
 
       port
+    end
+
+    def resolve_tls(options)
+      return nil unless options[:tls] || options[:cert] || options[:key]
+
+      TlsContext::Resolver.resolve(cert_path: options[:cert], key_path: options[:key])
     end
   end
 end

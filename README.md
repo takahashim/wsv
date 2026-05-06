@@ -36,9 +36,37 @@ Options:
 ```text
 -h, --host HOST    Bind host (default: 127.0.0.1)
 -p, --port PORT    Bind port (default: 8000)
+    --tls          Enable HTTPS (uses ~/.config/wsv/cert.pem if present, else self-signed)
+    --cert PATH    TLS certificate file (PEM); implies --tls
+    --key PATH     TLS private key file (PEM); implies --tls
     --help         Show help
     --version      Show version
 ```
+
+## TLS / HTTPS
+
+`--tls` enables HTTPS on the chosen `--port`. Three modes:
+
+1. **Ephemeral self-signed** — `wsv --tls` with no cert configured: wsv
+   generates an in-memory self-signed certificate. Browsers will show a
+   security warning; click through "Advanced → Proceed" once per session.
+2. **`~/.config/wsv/` auto-detection (recommended)** — if both
+   `~/.config/wsv/cert.pem` and `~/.config/wsv/key.pem` exist (resolved via
+   `$XDG_CONFIG_HOME` if set), `--tls` uses them. Combine with
+   [mkcert](https://github.com/FiloSottile/mkcert) to skip browser warnings:
+
+   ```sh
+   mkcert -install     # one-time: register a local CA in your trust stores
+   mkdir -p ~/.config/wsv
+   mkcert -cert-file ~/.config/wsv/cert.pem \
+          -key-file  ~/.config/wsv/key.pem  \
+          localhost 127.0.0.1 ::1
+   chmod 600 ~/.config/wsv/key.pem
+   wsv --tls           # → https://localhost:8000/ with no warning
+   ```
+
+3. **Explicit cert/key files** — `wsv --cert path/to/cert.pem --key path/to/key.pem`
+   for project-specific certificates. Both flags must be provided together.
 
 ## Behavior
 
