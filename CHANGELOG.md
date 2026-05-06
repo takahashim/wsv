@@ -24,6 +24,12 @@
 - Make the accept loop resilient to transient errors: per-connection failures
   (`ECONNABORTED`, `EMFILE`, `ENOMEM`, etc.) are logged and skipped instead of
   killing the server. A 50 ms backoff prevents tight error loops.
+- Add RuboCop with `rubocop-minitest` / `rubocop-rake` plugins. `rake` now
+  runs both `test` and `rubocop`.
+- Add GitHub Actions CI: tests on Ruby 3.2 / 3.3 / 3.4 plus a separate
+  RuboCop job.
+- Document the security model in README (what `wsv` protects against and
+  what is explicitly out of scope).
 
 ## 0.1.0
 

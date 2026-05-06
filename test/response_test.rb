@@ -5,25 +5,25 @@ require_relative "test_helper"
 class ResponseTest < Minitest::Test
   def test_rejects_crlf_in_header_value
     assert_raises(ArgumentError) do
-      Wsv::Response.new(status: 200, headers: {"X-Foo" => "bad\r\nInjected: yes"})
+      Wsv::Response.new(status: 200, headers: { "X-Foo" => "bad\r\nInjected: yes" })
     end
   end
 
   def test_rejects_lf_in_header_value
     assert_raises(ArgumentError) do
-      Wsv::Response.new(status: 200, headers: {"X-Foo" => "bad\nthing"})
+      Wsv::Response.new(status: 200, headers: { "X-Foo" => "bad\nthing" })
     end
   end
 
   def test_rejects_crlf_in_header_name
     assert_raises(ArgumentError) do
-      Wsv::Response.new(status: 200, headers: {"X-Bad\r\n" => "value"})
+      Wsv::Response.new(status: 200, headers: { "X-Bad\r\n" => "value" })
     end
   end
 
   def test_rejects_colon_in_header_name
     assert_raises(ArgumentError) do
-      Wsv::Response.new(status: 200, headers: {"X-Foo: extra" => "value"})
+      Wsv::Response.new(status: 200, headers: { "X-Foo: extra" => "value" })
     end
   end
 

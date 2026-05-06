@@ -108,7 +108,7 @@ module Wsv
         when :wait_readable
           remaining = deadline - Time.now
           return if remaining <= 0
-          return unless IO.select([client], nil, nil, [remaining, 0.2].min)
+          return unless client.wait_readable([remaining, 0.2].min)
         end
       end
     end
@@ -196,7 +196,7 @@ module Wsv
     def log_startup
       @out.puts "Serving: #{root}"
       @out.puts "Bind:    #{url_for(host)}"
-      @out.puts "Local:   #{url_for("127.0.0.1")}" unless localhost?(host)
+      @out.puts "Local:   #{url_for('127.0.0.1')}" unless localhost?(host)
       @out.puts "Stop:    Ctrl-C"
       warn_public_bind unless localhost?(host)
     end
@@ -211,7 +211,7 @@ module Wsv
     end
 
     def localhost?(display_host)
-      display_host == "127.0.0.1" || display_host == "localhost" || display_host == "::1"
+      ["127.0.0.1", "localhost", "::1"].include?(display_host)
     end
   end
 end

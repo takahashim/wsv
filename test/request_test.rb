@@ -23,7 +23,7 @@ class RequestTest < Minitest::Test
   end
 
   def test_request_line_too_long_raises_414
-    long_path = "/" + ("a" * 9000)
+    long_path = "/#{'a' * 9000}"
     io = StringIO.new("GET #{long_path} HTTP/1.1\r\nHost: x\r\n\r\n")
 
     error = assert_raises(Wsv::Request::TooLarge) { Wsv::Request.parse(io) }
@@ -51,7 +51,7 @@ class RequestTest < Minitest::Test
   end
 
   def test_single_header_line_too_long_raises_431
-    big_header = "X-Long: " + ("z" * 9000) + "\r\n"
+    big_header = "X-Long: #{'z' * 9000}\r\n"
     io = StringIO.new("GET / HTTP/1.1\r\n#{big_header}\r\n")
 
     error = assert_raises(Wsv::Request::TooLarge) { Wsv::Request.parse(io) }

@@ -7,7 +7,7 @@ require_relative "version"
 
 module Wsv
   class Response
-    SERVER_NAME = "wsv/#{Wsv::VERSION}"
+    SERVER_NAME = "wsv/#{Wsv::VERSION}".freeze
 
     INVALID_HEADER_NAME = /[\s:]/
     INVALID_HEADER_VALUE = /[\r\n]/
@@ -61,7 +61,7 @@ module Wsv
     end
 
     def self.redirect(location, head: false)
-      text(301, headers: {"Location" => location}, head: head)
+      text(301, headers: { "Location" => location }, head: head)
     end
   end
 end

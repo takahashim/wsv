@@ -17,7 +17,8 @@ Gem::Specification.new do |spec|
   spec.metadata = {
     "homepage_uri" => spec.homepage,
     "source_code_uri" => "https://github.com/takahashim/wsv",
-    "changelog_uri" => "https://github.com/takahashim/wsv/blob/main/CHANGELOG.md"
+    "changelog_uri" => "https://github.com/takahashim/wsv/blob/main/CHANGELOG.md",
+    "rubygems_mfa_required" => "true"
   }
 
   spec.files = Dir[

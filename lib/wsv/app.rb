@@ -15,7 +15,7 @@ module Wsv
       head = request.head?
 
       unless ALLOWED_METHODS.include?(request.method)
-        return Response.text(405, headers: {"Allow" => "GET, HEAD"}, head: head)
+        return Response.text(405, headers: { "Allow" => "GET, HEAD" }, head: head)
       end
 
       raw_path, query = request.target.split("?", 2)

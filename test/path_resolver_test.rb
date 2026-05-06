@@ -19,14 +19,14 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/hello.txt")
 
-    assert result.file?
+    assert_predicate result, :file?
     assert_equal File.realpath(path), result.file
   end
 
   def test_returns_404_for_missing_file
     result = @resolver.resolve("/nope.txt")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 404, result.status
   end
 
@@ -36,7 +36,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/docs")
 
-    assert result.redirect?
+    assert_predicate result, :redirect?
   end
 
   def test_serves_index_for_directory_with_trailing_slash
@@ -46,7 +46,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/docs/")
 
-    assert result.file?
+    assert_predicate result, :file?
     assert_equal File.realpath(index), result.file
   end
 
@@ -55,14 +55,14 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/assets/")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 404, result.status
   end
 
   def test_rejects_path_traversal
     result = @resolver.resolve("/../etc/passwd")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -71,7 +71,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/.env")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -81,7 +81,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/.git/config")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -91,14 +91,14 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/sub/.secret")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
   def test_rejects_url_encoded_traversal
     result = @resolver.resolve("/%2e%2e/etc/passwd")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -107,7 +107,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/%2eenv")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -116,14 +116,14 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/foo+bar.txt")
 
-    assert result.file?
+    assert_predicate result, :file?
     assert_equal File.realpath(File.join(@dir, "foo+bar.txt")), result.file
   end
 
   def test_returns_400_for_invalid_uri
     result = @resolver.resolve("http://[invalid")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 400, result.status
   end
 
@@ -133,7 +133,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/config")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -144,7 +144,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/gitstuff/HEAD")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   end
 
@@ -154,7 +154,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/alias.txt")
 
-    assert result.file?
+    assert_predicate result, :file?
     assert_equal File.realpath(File.join(@dir, "real.txt")), result.file
   end
 
@@ -164,7 +164,7 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/a")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 404, result.status
   end
 
@@ -175,10 +175,9 @@ class PathResolverTest < Minitest::Test
 
     result = @resolver.resolve("/link")
 
-    assert result.error?
+    assert_predicate result, :error?
     assert_equal 403, result.status
   ensure
     FileUtils.rm_f(outside) if outside
   end
-
 end
