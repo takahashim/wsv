@@ -45,4 +45,45 @@ class ResponseTest < Minitest::Test
 
     assert_includes io.string, "HTTP/1.1 404 Not Found"
   end
+
+  def test_file_response_streams_via_io_copy_stream
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "data.bin")
+      File.binwrite(path, "abcdefghij")
+
+      response = Wsv::Response.file(path)
+      io = StringIO.new
+      response.write_to(io)
+
+      assert_includes io.string, "HTTP/1.1 200 OK"
+      assert io.string.end_with?("abcdefghij"), "expected file bytes at end of response"
+    end
+  end
+
+  def test_file_response_does_not_eagerly_read_file
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "data.bin")
+      File.binwrite(path, "abcdefghij")
+
+      response = Wsv::Response.file(path)
+      File.delete(path)
+
+      assert_equal 200, response.status
+      assert_equal "10", response.headers["Content-Length"]
+    end
+  end
+
+  def test_file_response_streams_byte_range
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "data.bin")
+      File.binwrite(path, "abcdefghij")
+
+      response = Wsv::Response.file(path, range: 2..5)
+      io = StringIO.new
+      response.write_to(io)
+
+      assert_includes io.string, "HTTP/1.1 206 Partial Content"
+      assert io.string.end_with?("cdef"), "expected only the requested range"
+    end
+  end
 end

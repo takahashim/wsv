@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Stream file responses through `IO.copy_stream` instead of buffering the
+  whole file in memory. Reduces RSS for large files and uses `sendfile(2)`
+  on Linux when available. `Response#body` still materializes to a String
+  for callers; the change is internal to the wire path.
 - Support `Range` requests for static files (`206 Partial Content` with
   `Content-Range`). Open-ended (`bytes=N-`), suffix (`bytes=-N`), and
   bounded (`bytes=N-M`) forms are supported. Unsatisfiable ranges return

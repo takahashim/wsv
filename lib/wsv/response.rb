@@ -2,6 +2,8 @@
 
 require_relative "status"
 require_relative "version"
+require_relative "response/string_body"
+require_relative "response/file_body"
 require_relative "response/text_builder"
 require_relative "response/file_builder"
 
@@ -12,13 +14,17 @@ module Wsv
     INVALID_HEADER_NAME = /[\s:]/
     INVALID_HEADER_VALUE = /[\r\n]/
 
-    attr_reader :status, :headers, :body
+    attr_reader :status, :headers
 
     def initialize(status:, headers: {}, body: "")
       validate_headers(headers)
       @status = status
       @headers = headers
-      @body = body
+      @body = body.is_a?(String) ? StringBody.new(body) : body
+    end
+
+    def body
+      @body.to_s
     end
 
     def reason
@@ -31,7 +37,7 @@ module Wsv
       io.write "Connection: close\r\n"
       headers.each { |name, value| io.write "#{name}: #{value}\r\n" }
       io.write "\r\n"
-      io.write body
+      @body.write_to(io)
     end
 
     def self.text(status, **)

@@ -47,16 +47,15 @@ module Wsv
       end
 
       def range_body
-        return "" if @head
+        return StringBody.new("") if @head
 
-        File.open(@path, "rb") do |f|
-          f.seek(@range.begin)
-          f.read(@range.size)
-        end
+        FileBody.new(@path, offset: @range.begin, length: @range.size)
       end
 
       def full_body
-        @head ? "" : File.binread(@path)
+        return StringBody.new("") if @head
+
+        FileBody.new(@path)
       end
     end
   end
