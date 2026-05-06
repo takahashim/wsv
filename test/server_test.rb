@@ -127,6 +127,43 @@ class ServerTest < Minitest::Test
     FileUtils.rm_f(secret) if secret
   end
 
+  def test_returns_414_for_too_long_request_line
+    start_server
+
+    long_path = "/" + ("a" * 9000)
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    socket.write("GET #{long_path} HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 414"
+  ensure
+    socket&.close
+  end
+
+  def test_returns_431_for_too_large_headers
+    start_server
+
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    big = "X-Long: " + ("z" * 9000) + "\r\n"
+    socket.write("GET / HTTP/1.1\r\n#{big}\r\n")
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 431"
+  ensure
+    socket&.close
+  end
+
+  def test_returns_408_for_idle_client
+    start_server(read_timeout: 0.1)
+
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 408"
+  ensure
+    socket&.close
+  end
+
   def test_unsupported_method
     start_server
 
@@ -138,8 +175,15 @@ class ServerTest < Minitest::Test
 
   private
 
-  def start_server
-    @server = Wsv::Server.new(host: "127.0.0.1", port: free_port, root: @dir, out: StringIO.new, err: StringIO.new)
+  def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT)
+    @server = Wsv::Server.new(
+      host: "127.0.0.1",
+      port: free_port,
+      root: @dir,
+      out: StringIO.new,
+      err: StringIO.new,
+      read_timeout: read_timeout
+    )
     @thread = Thread.new { @server.start }
     wait_until_ready
   end

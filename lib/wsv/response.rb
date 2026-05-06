@@ -9,9 +9,16 @@ module Wsv
   class Response
     SERVER_NAME = "wsv/#{Wsv::VERSION}"
 
+    INVALID_HEADER_NAME = /[\s:]/
+    INVALID_HEADER_VALUE = /[\r\n]/
+
     attr_reader :status, :headers, :body
 
     def initialize(status:, headers: {}, body: "")
+      headers.each do |name, value|
+        raise ArgumentError, "invalid header name: #{name.inspect}" if name.to_s.match?(INVALID_HEADER_NAME)
+        raise ArgumentError, "invalid header value: #{value.inspect}" if value.to_s.match?(INVALID_HEADER_VALUE)
+      end
       @status = status
       @headers = headers
       @body = body

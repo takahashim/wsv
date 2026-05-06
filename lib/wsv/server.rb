@@ -7,14 +7,17 @@ require_relative "response"
 
 module Wsv
   class Server
+    DEFAULT_READ_TIMEOUT = 10
+
     attr_reader :host, :port, :root
 
-    def initialize(host:, port:, root:, out: $stdout, err: $stderr)
+    def initialize(host:, port:, root:, out: $stdout, err: $stderr, read_timeout: DEFAULT_READ_TIMEOUT)
       @host = host
       @port = port
       @root = File.realpath(root)
       @out = out
       @err = err
+      @read_timeout = read_timeout
       @app = App.new(@root)
       @running = false
     end
@@ -35,23 +38,77 @@ module Wsv
     end
 
     def handle(client)
-      request = Request.parse(client)
+      reader = DeadlineReader.new(client, Time.now + @read_timeout)
+      request = Request.parse(reader)
       case request
       when :empty
         nil
       when :malformed
-        Response.text(400).write_to(client)
+        write_response(client, Response.text(400))
       else
-        @app.call(request).write_to(client)
+        write_response(client, @app.call(request))
       end
+    rescue Request::TooLarge => e
+      write_response(client, Response.text(e.status_code))
+    rescue IO::TimeoutError
+      write_response(client, Response.text(408))
     rescue StandardError => e
       @err.puts "wsv: #{e.class}: #{e.message}"
-      Response.text(400).write_to(client) unless client.closed?
+      write_response(client, Response.text(400))
     ensure
-      client.close unless client.closed?
+      graceful_close(client)
     end
 
     private
+
+    def write_response(client, response)
+      return if client.closed?
+
+      response.write_to(client)
+    rescue Errno::EPIPE, Errno::ECONNRESET, IOError
+      nil
+    end
+
+    def graceful_close(client)
+      return if client.closed?
+
+      drain_recv(client)
+    rescue StandardError
+      nil
+    ensure
+      begin
+        client.close unless client.closed?
+      rescue StandardError
+        nil
+      end
+    end
+
+    def drain_recv(client)
+      loop do
+        chunk = client.read_nonblock(8192, exception: false)
+        case chunk
+        when nil, :wait_writable
+          break
+        when :wait_readable
+          break unless IO.select([client], nil, nil, 0.2)
+        end
+      end
+    end
+
+    class DeadlineReader
+      def initialize(io, deadline)
+        @io = io
+        @deadline = deadline
+      end
+
+      def gets(limit)
+        remaining = @deadline - Time.now
+        raise IO::TimeoutError if remaining <= 0
+
+        @io.timeout = remaining
+        @io.gets(limit)
+      end
+    end
 
     def accept_loop
       while @running

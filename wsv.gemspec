@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "wsv serves a local directory over HTTP from a zero-config CLI."
   spec.homepage = "https://rubygems.org/gems/wsv"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1"
+  spec.required_ruby_version = ">= 3.2"
 
   spec.metadata = {
     "homepage_uri" => spec.homepage,
