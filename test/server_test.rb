@@ -181,6 +181,36 @@ class ServerTest < Minitest::Test
     slow_socket&.close
   end
 
+  def test_warns_when_binding_to_non_loopback
+    err = StringIO.new
+    server = Wsv::Server.new(host: "0.0.0.0", port: 0, root: @dir, out: StringIO.new, err: err)
+    server.send(:log_startup)
+
+    assert_includes err.string, "WARNING"
+    assert_includes err.string, "0.0.0.0"
+  end
+
+  def test_no_warning_for_loopback_bind
+    err = StringIO.new
+    server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir, out: StringIO.new, err: err)
+    server.send(:log_startup)
+
+    refute_includes err.string, "WARNING"
+  end
+
+  def test_drains_request_body_for_unsupported_method
+    start_server
+
+    body = "X" * 10_000
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    socket.write("POST /upload HTTP/1.1\r\nHost: localhost\r\nContent-Length: #{body.bytesize}\r\n\r\n#{body}")
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 405"
+  ensure
+    socket&.close
+  end
+
   def test_unsupported_method
     start_server
 

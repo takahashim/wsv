@@ -9,6 +9,7 @@ module Wsv
   class Server
     DEFAULT_READ_TIMEOUT = 10
     DEFAULT_MAX_CONNECTIONS = 8
+    DRAIN_TIMEOUT = 5
 
     attr_reader :host, :port, :root
 
@@ -96,13 +97,18 @@ module Wsv
     end
 
     def drain_recv(client)
+      deadline = Time.now + DRAIN_TIMEOUT
       loop do
+        return if Time.now >= deadline
+
         chunk = client.read_nonblock(8192, exception: false)
         case chunk
         when nil, :wait_writable
-          break
+          return
         when :wait_readable
-          break unless IO.select([client], nil, nil, 0.2)
+          remaining = deadline - Time.now
+          return if remaining <= 0
+          return unless IO.select([client], nil, nil, [remaining, 0.2].min)
         end
       end
     end
@@ -178,6 +184,12 @@ module Wsv
       @out.puts "Bind:    #{url_for(host)}"
       @out.puts "Local:   #{url_for("127.0.0.1")}" unless localhost?(host)
       @out.puts "Stop:    Ctrl-C"
+      warn_public_bind unless localhost?(host)
+    end
+
+    def warn_public_bind
+      @err.puts "WARNING: binding to #{host} exposes #{root} on your network."
+      @err.puts "         Pass --host 127.0.0.1 (or omit --host) for local-only access."
     end
 
     def url_for(display_host)

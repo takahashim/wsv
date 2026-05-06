@@ -16,6 +16,11 @@
 - Concurrent connection handling: a thread is spawned per accepted client up
   to `max_connections` (default 8). Idle servers hold no worker threads.
   Connections beyond the cap receive 503 and are closed.
+- Print a `WARNING` to stderr when binding to a non-loopback address so
+  exposing the served directory to the network is intentional, not silent.
+- Cap the post-response receive drain at 5 seconds so a malicious or stuck
+  client cannot tie up a worker indefinitely while sending body bytes after
+  the response has been written.
 
 ## 0.1.0
 
