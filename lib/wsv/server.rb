@@ -127,7 +127,7 @@ module Wsv
         remaining = @deadline - Time.now
         raise IO::TimeoutError if remaining <= 0
 
-        @io.timeout = remaining
+        @io.to_io.timeout = remaining
         @io.gets(eol, limit)
       end
     end
@@ -185,9 +185,9 @@ module Wsv
     def maybe_wrap_tls(client)
       return client unless @ssl_context
 
+      client.timeout = @read_timeout
       ssl = OpenSSL::SSL::SSLSocket.new(client, @ssl_context)
       ssl.sync_close = true
-      ssl.timeout = @read_timeout
       ssl.accept
       ssl
     end
