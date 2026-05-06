@@ -69,9 +69,159 @@ class AppTest < Minitest::Test
     assert_equal "2", response.headers["Content-Length"]
   end
 
+  def test_advertises_accept_ranges_on_200
+    File.write(File.join(@dir, "x.txt"), "hi")
+
+    response = @app.call(req("GET", "/x.txt"))
+
+    assert_equal "bytes", response.headers["Accept-Ranges"]
+  end
+
+  def test_returns_304_when_if_modified_since_matches
+    path = File.join(@dir, "x.txt")
+    File.write(path, "hi")
+
+    response = @app.call(req("GET", "/x.txt", "if-modified-since" => File.mtime(path).httpdate))
+
+    assert_equal 304, response.status
+    assert_equal "", response.body
+    refute response.headers.key?("Content-Length")
+  end
+
+  def test_returns_200_when_if_modified_since_is_older
+    path = File.join(@dir, "x.txt")
+    File.write(path, "hi")
+    older = (File.mtime(path) - 3600).httpdate
+
+    response = @app.call(req("GET", "/x.txt", "if-modified-since" => older))
+
+    assert_equal 200, response.status
+    assert_equal "hi", response.body
+  end
+
+  def test_invalid_if_modified_since_is_ignored
+    File.write(File.join(@dir, "x.txt"), "hi")
+
+    response = @app.call(req("GET", "/x.txt", "if-modified-since" => "not a date"))
+
+    assert_equal 200, response.status
+  end
+
+  def test_serves_byte_range
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=2-5"))
+
+    assert_equal 206, response.status
+    assert_equal "cdef", response.body
+    assert_equal "4", response.headers["Content-Length"]
+    assert_equal "bytes 2-5/10", response.headers["Content-Range"]
+  end
+
+  def test_serves_open_ended_range
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=7-"))
+
+    assert_equal 206, response.status
+    assert_equal "hij", response.body
+    assert_equal "bytes 7-9/10", response.headers["Content-Range"]
+  end
+
+  def test_serves_suffix_range
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=-3"))
+
+    assert_equal 206, response.status
+    assert_equal "hij", response.body
+    assert_equal "bytes 7-9/10", response.headers["Content-Range"]
+  end
+
+  def test_clamps_range_end_to_file_size
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=5-99"))
+
+    assert_equal 206, response.status
+    assert_equal "fghij", response.body
+    assert_equal "bytes 5-9/10", response.headers["Content-Range"]
+  end
+
+  def test_unsatisfiable_range_returns_416
+    File.write(File.join(@dir, "data.bin"), "abc")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=10-20"))
+
+    assert_equal 416, response.status
+    assert_equal "bytes */3", response.headers["Content-Range"]
+  end
+
+  def test_invalid_range_syntax_serves_full_content
+    File.write(File.join(@dir, "data.bin"), "abc")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=garbage"))
+
+    assert_equal 200, response.status
+    assert_equal "abc", response.body
+  end
+
+  def test_head_with_range_omits_body_but_keeps_headers
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("HEAD", "/data.bin", "range" => "bytes=0-2"))
+
+    assert_equal 206, response.status
+    assert_equal "", response.body
+    assert_equal "3", response.headers["Content-Length"]
+  end
+
+  def test_serves_single_byte_range
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=0-0"))
+
+    assert_equal 206, response.status
+    assert_equal "a", response.body
+    assert_equal "1", response.headers["Content-Length"]
+    assert_equal "bytes 0-0/10", response.headers["Content-Range"]
+  end
+
+  def test_inverted_range_returns_416
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=5-3"))
+
+    assert_equal 416, response.status
+    assert_equal "bytes */10", response.headers["Content-Range"]
+  end
+
+  def test_206_preserves_caching_headers
+    path = File.join(@dir, "data.bin")
+    File.write(path, "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=2-5"))
+
+    assert_equal 206, response.status
+    assert_equal Wsv::MimeTypes.for_file("data.bin"), response.headers["Content-Type"]
+    assert_equal File.mtime(path).httpdate, response.headers["Last-Modified"]
+    assert_equal "no-cache", response.headers["Cache-Control"]
+    assert_equal "bytes", response.headers["Accept-Ranges"]
+  end
+
+  def test_multipart_range_falls_through_to_200
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+
+    response = @app.call(req("GET", "/data.bin", "range" => "bytes=0-2,5-7"))
+
+    assert_equal 200, response.status
+    assert_equal "abcdefghij", response.body
+    refute response.headers.key?("Content-Range")
+  end
+
   private
 
-  def req(method, target)
-    Wsv::Request.new(method: method, target: target, version: "HTTP/1.1", headers: {})
+  def req(method, target, headers = {})
+    Wsv::Request.new(method: method, target: target, version: "HTTP/1.1", headers: headers)
   end
 end

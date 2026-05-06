@@ -47,16 +47,47 @@ module Wsv
       new(status: status, headers: base.merge(headers), body: head ? "" : body)
     end
 
-    def self.file(path, head: false)
+    def self.file(path, head: false, range: nil)
+      size = File.size(path)
+      headers = {
+        "Content-Type" => MimeTypes.for_file(path),
+        "Last-Modified" => File.mtime(path).httpdate,
+        "Cache-Control" => "no-cache",
+        "Accept-Ranges" => "bytes"
+      }
+      if range
+        headers["Content-Length"] = range.size.to_s
+        headers["Content-Range"] = "bytes #{range.begin}-#{range.end}/#{size}"
+        new(status: 206, headers: headers, body: head ? "" : read_range(path, range))
+      else
+        headers["Content-Length"] = size.to_s
+        new(status: 200, headers: headers, body: head ? "" : File.binread(path))
+      end
+    end
+
+    def self.read_range(path, range)
+      File.open(path, "rb") do |f|
+        f.seek(range.begin)
+        f.read(range.size)
+      end
+    end
+    private_class_method :read_range
+
+    def self.not_modified
+      new(status: 304, headers: { "Cache-Control" => "no-cache" }, body: "")
+    end
+
+    def self.range_not_satisfiable(file_size, head: false)
+      body = "416 Range Not Satisfiable\n"
       new(
-        status: 200,
+        status: 416,
         headers: {
-          "Content-Type" => MimeTypes.for_file(path),
-          "Content-Length" => File.size(path).to_s,
-          "Last-Modified" => File.mtime(path).httpdate,
+          "Content-Type" => "text/plain; charset=utf-8",
+          "Content-Length" => body.bytesize.to_s,
+          "Content-Range" => "bytes */#{file_size}",
           "Cache-Control" => "no-cache"
         },
-        body: head ? "" : File.binread(path)
+        body: head ? "" : body
       )
     end
 

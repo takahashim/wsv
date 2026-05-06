@@ -226,6 +226,33 @@ class ServerTest < Minitest::Test
     socket&.close
   end
 
+  def test_serves_byte_range_e2e
+    File.write(File.join(@dir, "data.bin"), "abcdefghij")
+    start_server
+
+    uri = URI("http://127.0.0.1:#{@server.port}/data.bin")
+    response = Net::HTTP.start(uri.host, uri.port) do |http|
+      http.get(uri.path, "Range" => "bytes=2-5")
+    end
+
+    assert_equal "206", response.code
+    assert_equal "cdef", response.body
+    assert_equal "bytes 2-5/10", response["content-range"]
+  end
+
+  def test_returns_304_when_if_modified_since_matches_e2e
+    path = File.join(@dir, "x.txt")
+    File.write(path, "hi")
+    start_server
+
+    uri = URI("http://127.0.0.1:#{@server.port}/x.txt")
+    response = Net::HTTP.start(uri.host, uri.port) do |http|
+      http.get(uri.path, "If-Modified-Since" => File.mtime(path).httpdate)
+    end
+
+    assert_equal "304", response.code
+  end
+
   def test_unsupported_method
     start_server
 

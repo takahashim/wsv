@@ -46,8 +46,10 @@ Options:
 - Serves `index.html` for directories that contain it.
 - Does not render directory listings.
 - Supports `GET` and `HEAD`.
+- Supports `Range` requests (`206 Partial Content` with `Content-Range`).
+- Honours `If-Modified-Since` and returns `304 Not Modified` when applicable.
 - Rejects paths that resolve outside the served directory.
-- Sends `Cache-Control: no-cache` for local development.
+- Sends `Cache-Control: no-cache` so the browser revalidates each request.
 
 ## Security model
 
@@ -84,13 +86,34 @@ Within that scope it tries to behave defensively:
 
 - Authentication, authorization, or rate limiting.
 - TLS / HTTPS.
-- Range requests, conditional `GET`, or HTTP keep-alive.
+- HTTP keep-alive (each response sets `Connection: close`).
+- ETags / `If-None-Match`.
 - Production-grade DoS resistance under hostile network load.
 - Protect a directory you should not be sharing in the first place. The
   bound is the directory you pass on the command line; if it contains
   secrets, do not run `wsv` against it.
 
 If you need any of the above, use a real production server.
+
+## Public API and stability
+
+`wsv` follows [Semantic Versioning](https://semver.org/). The public API
+that SemVer covers is the CLI:
+
+- The flags listed above (`-h` / `--host`, `-p` / `--port`, `--help`,
+  `--version`) and their meanings.
+- The directory argument and the default behaviour when it is omitted.
+- Process exit codes (`0` for success, `1` for usage / setup errors).
+
+Within a major version, `wsv` will not silently change the default bind
+host, default port, the dotfile-blocking rule, or the security posture in
+ways that would surprise an existing user.
+
+The Ruby classes inside `lib/wsv/` (`Wsv::Server`, `Wsv::App`,
+`Wsv::PathResolver`, `Wsv::Request`, `Wsv::Response`, `Wsv::MimeTypes`,
+`Wsv::Status`) are implementation details. They may change at any
+time, including in patch releases. If you want to embed `wsv` as a
+library, pin a specific version.
 
 ## License
 

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Support `Range` requests for static files (`206 Partial Content` with
+  `Content-Range`). Open-ended (`bytes=N-`), suffix (`bytes=-N`), and
+  bounded (`bytes=N-M`) forms are supported. Unsatisfiable ranges return
+  `416`; invalid syntax falls through to a normal `200`.
+- Honour `If-Modified-Since` and return `304 Not Modified` when the file's
+  mtime (truncated to seconds) is at or before the supplied date.
+- Advertise `Accept-Ranges: bytes` on `200` and `206` file responses.
+- Document the public API contract in README: the CLI is the SemVer
+  surface. Ruby classes under `lib/wsv/` are implementation details.
+
+## 0.8.0
+
 - Bound request size: 8 KiB request line, 8 KiB per header line, 16 KiB total
   headers, 100 header lines. Returns 414 / 431 when exceeded.
 - Per-request read deadline (default 10s) for slow/idle clients. Returns 408
