@@ -11,7 +11,8 @@ module Wsv
       405 => "Method Not Allowed",
       408 => "Request Timeout",
       414 => "URI Too Long",
-      431 => "Request Header Fields Too Large"
+      431 => "Request Header Fields Too Large",
+      503 => "Service Unavailable"
     }.freeze
 
     def self.reason(code)

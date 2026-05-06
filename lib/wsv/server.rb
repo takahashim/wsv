@@ -8,18 +8,30 @@ require_relative "response"
 module Wsv
   class Server
     DEFAULT_READ_TIMEOUT = 10
+    DEFAULT_MAX_CONNECTIONS = 8
 
     attr_reader :host, :port, :root
 
-    def initialize(host:, port:, root:, out: $stdout, err: $stderr, read_timeout: DEFAULT_READ_TIMEOUT)
+    def initialize(
+      host:,
+      port:,
+      root:,
+      out: $stdout,
+      err: $stderr,
+      read_timeout: DEFAULT_READ_TIMEOUT,
+      max_connections: DEFAULT_MAX_CONNECTIONS
+    )
       @host = host
       @port = port
       @root = File.realpath(root)
       @out = out
       @err = err
       @read_timeout = read_timeout
+      @max_connections = max_connections
       @app = App.new(@root)
       @running = false
+      @mutex = Mutex.new
+      @active = 0
     end
 
     def start
@@ -114,11 +126,36 @@ module Wsv
       while @running
         begin
           client = @server.accept
-          handle(client)
         rescue IOError, Errno::EBADF
-          break unless @running
+          break
         end
+
+        spawn_handler(client)
       end
+    end
+
+    def spawn_handler(client)
+      accepted = @mutex.synchronize do
+        next false if @active >= @max_connections
+
+        @active += 1
+        true
+      end
+
+      return reject(client) unless accepted
+
+      Thread.new do
+        Thread.current.report_on_exception = false
+        handle(client)
+      ensure
+        @mutex.synchronize { @active -= 1 }
+      end
+    end
+
+    def reject(client)
+      write_response(client, Response.text(503))
+    ensure
+      graceful_close(client)
     end
 
     def close

@@ -13,6 +13,9 @@
 - Apply the dotfile filter to the resolved real path so a symlink inside the
   root cannot smuggle access to `.git/`, `.env`, etc. Symlink loops and
   permission errors now resolve to 404 cleanly.
+- Concurrent connection handling: a thread is spawned per accepted client up
+  to `max_connections` (default 8). Idle servers hold no worker threads.
+  Connections beyond the cap receive 503 and are closed.
 
 ## 0.1.0
 

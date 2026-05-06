@@ -164,6 +164,23 @@ class ServerTest < Minitest::Test
     socket&.close
   end
 
+  def test_slow_client_does_not_block_other_clients
+    File.write(File.join(@dir, "x.txt"), "ok")
+    start_server(read_timeout: 5)
+
+    slow_socket = TCPSocket.open("127.0.0.1", @server.port)
+
+    started = Time.now
+    response = get("/x.txt")
+    elapsed = Time.now - started
+
+    assert_equal "200", response.code
+    assert_equal "ok", response.body
+    assert_operator elapsed, :<, 1.0, "request should not be serialized behind slow client"
+  ensure
+    slow_socket&.close
+  end
+
   def test_unsupported_method
     start_server
 
