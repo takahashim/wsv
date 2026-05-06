@@ -198,6 +198,21 @@ class ServerTest < Minitest::Test
     refute_includes err.string, "WARNING"
   end
 
+  def test_accept_loop_survives_transient_accept_error
+    File.write(File.join(@dir, "x.txt"), "ok")
+    err = StringIO.new
+    @server = Wsv::Server.new(host: "127.0.0.1", port: free_port, root: @dir, out: StringIO.new, err: err)
+    inject_one_accept_error(@server, Errno::ECONNABORTED)
+    @thread = Thread.new { @server.start }
+    wait_until_ready
+
+    response = get("/x.txt")
+
+    assert_equal "200", response.code
+    assert_includes err.string, "accept error"
+    assert_includes err.string, "ECONNABORTED"
+  end
+
   def test_drains_request_body_for_unsupported_method
     start_server
 
@@ -233,6 +248,27 @@ class ServerTest < Minitest::Test
     )
     @thread = Thread.new { @server.start }
     wait_until_ready
+  end
+
+  def inject_one_accept_error(server, error_class)
+    fired = false
+    server.define_singleton_method(:start) do
+      @server = TCPServer.new(host, port)
+      original = @server.method(:accept)
+      @server.define_singleton_method(:accept) do
+        unless fired
+          fired = true
+          raise error_class, "injected"
+        end
+        original.call
+      end
+      @running = true
+      log_startup
+      trap_signals
+      accept_loop
+    ensure
+      close
+    end
   end
 
   def free_port

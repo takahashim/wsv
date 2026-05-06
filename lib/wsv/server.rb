@@ -130,13 +130,27 @@ module Wsv
 
     def accept_loop
       while @running
+        client = nil
         begin
           client = @server.accept
         rescue IOError, Errno::EBADF
           break
+        rescue StandardError => e
+          @err.puts "wsv: accept error: #{e.class}: #{e.message}"
+          sleep 0.05
+          next
         end
 
-        spawn_handler(client)
+        begin
+          spawn_handler(client)
+        rescue StandardError => e
+          @err.puts "wsv: dispatch error: #{e.class}: #{e.message}"
+          begin
+            client.close
+          rescue StandardError
+            nil
+          end
+        end
       end
     end
 

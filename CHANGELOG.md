@@ -21,6 +21,9 @@
 - Cap the post-response receive drain at 5 seconds so a malicious or stuck
   client cannot tie up a worker indefinitely while sending body bytes after
   the response has been written.
+- Make the accept loop resilient to transient errors: per-connection failures
+  (`ECONNABORTED`, `EMFILE`, `ENOMEM`, etc.) are logged and skipped instead of
+  killing the server. A 50 ms backoff prevents tight error loops.
 
 ## 0.1.0
 
