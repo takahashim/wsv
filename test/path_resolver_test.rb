@@ -111,6 +111,15 @@ class PathResolverTest < Minitest::Test
     assert_equal 403, result.status
   end
 
+  def test_preserves_literal_plus_in_path
+    File.write(File.join(@dir, "foo+bar.txt"), "x")
+
+    result = @resolver.resolve("/foo+bar.txt")
+
+    assert result.file?
+    assert_equal File.realpath(File.join(@dir, "foo+bar.txt")), result.file
+  end
+
   def test_returns_400_for_invalid_uri
     result = @resolver.resolve("http://[invalid")
 

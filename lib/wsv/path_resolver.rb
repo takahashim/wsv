@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "cgi"
 require "uri"
 
 module Wsv
@@ -72,9 +71,17 @@ module Wsv
 
     def decode(raw_path)
       path = URI(raw_path.to_s).path
-      CGI.unescape(path)
-    rescue ArgumentError, URI::InvalidURIError
+      percent_decode(path)
+    rescue URI::InvalidURIError
       nil
+    end
+
+    def percent_decode(string)
+      decoded = string.gsub(/%([0-9a-fA-F]{2})/) { ::Regexp.last_match(1).hex.chr }
+      decoded.force_encoding(Encoding::UTF_8)
+      return nil unless decoded.valid_encoding?
+
+      decoded
     end
 
     def hidden_segment?(relative)
