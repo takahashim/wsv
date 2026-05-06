@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.0
 
 - Normalize the redirect `Location` to an origin-form path. Previously, an
   absolute-form request target such as `GET http://example.test/docs HTTP/1.1`
