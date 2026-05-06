@@ -21,7 +21,7 @@ module Wsv
       def build
         cert = OpenSSL::X509::Certificate.new
         cert.version = 2
-        cert.serial = SecureRandom.random_number(2**63)
+        cert.serial = SecureRandom.random_number((2**63) - 1) + 1
         cert.subject = OpenSSL::X509::Name.parse(SUBJECT)
         cert.issuer = cert.subject
         cert.public_key = @key.public_key
