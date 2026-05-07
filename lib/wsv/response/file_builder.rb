@@ -15,9 +15,9 @@ module Wsv
 
       def build
         if @range
-          Response.new(status: 206, headers: range_headers, body: range_body)
+          Response.new(status: 206, headers: range_headers, body: body)
         else
-          Response.new(status: @status, headers: full_headers, body: full_body)
+          Response.new(status: @status, headers: full_headers, body: body)
         end
       end
 
@@ -47,16 +47,11 @@ module Wsv
         base_headers.merge("Content-Length" => size.to_s)
       end
 
-      def range_body
+      def body
         return StringBody.new("") if @head
+        return FileBody.new(@path) unless @range
 
         FileBody.new(@path, offset: @range.begin, length: @range.size)
-      end
-
-      def full_body
-        return StringBody.new("") if @head
-
-        FileBody.new(@path)
       end
     end
   end
