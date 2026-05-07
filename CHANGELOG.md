@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 
 - Extract `Wsv::RangeRequest` from `App`. RFC 7233 range parsing
   (suffix / open-ended / bounded ranges, unsatisfiability) now lives
