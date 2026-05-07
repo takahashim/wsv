@@ -33,35 +33,35 @@ class RangeRequestTest < Minitest::Test
     result = Wsv::RangeRequest.parse("bytes=2-5", 100)
 
     assert_predicate result, :partial?
-    assert_equal(2..5, result.bounds)
+    assert_equal 2..5, result.bounds
   end
 
   def test_open_range
     result = Wsv::RangeRequest.parse("bytes=5-", 10)
 
     assert_predicate result, :partial?
-    assert_equal(5..9, result.bounds)
+    assert_equal 5..9, result.bounds
   end
 
   def test_suffix_range
     result = Wsv::RangeRequest.parse("bytes=-3", 10)
 
     assert_predicate result, :partial?
-    assert_equal(7..9, result.bounds)
+    assert_equal 7..9, result.bounds
   end
 
   def test_suffix_larger_than_file_clamps_to_zero
     result = Wsv::RangeRequest.parse("bytes=-99", 10)
 
     assert_predicate result, :partial?
-    assert_equal(0..9, result.bounds)
+    assert_equal 0..9, result.bounds
   end
 
   def test_bounded_last_past_file_clamps_to_end
     result = Wsv::RangeRequest.parse("bytes=5-99", 10)
 
     assert_predicate result, :partial?
-    assert_equal(5..9, result.bounds)
+    assert_equal 5..9, result.bounds
   end
 
   def test_zero_byte_suffix_is_unsatisfiable
