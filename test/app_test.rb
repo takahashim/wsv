@@ -109,6 +109,17 @@ class AppTest < Minitest::Test
     assert_equal "hi", response.body
   end
 
+  def test_304_takes_precedence_over_range
+    path = File.join(@dir, "x.txt")
+    File.write(path, "hi")
+
+    response = @app.call(req("GET", "/x.txt",
+                             "if-modified-since" => File.mtime(path).httpdate,
+                             "range" => "bytes=0-0"))
+
+    assert_equal 304, response.status
+  end
+
   def test_invalid_if_modified_since_is_ignored
     File.write(File.join(@dir, "x.txt"), "hi")
 

@@ -94,6 +94,27 @@ class RangeRequestTest < Minitest::Test
     assert_predicate result, :unsatisfiable?
   end
 
+  def test_bounded_range_at_exact_file_boundary
+    result = Wsv::RangeRequest.parse("bytes=0-9", 10)
+
+    assert_predicate result, :partial?
+    assert_equal(0..9, result.bounds)
+  end
+
+  def test_suffix_range_equal_to_file_size
+    result = Wsv::RangeRequest.parse("bytes=-10", 10)
+
+    assert_predicate result, :partial?
+    assert_equal(0..9, result.bounds)
+  end
+
+  def test_single_byte_range_at_last_position
+    result = Wsv::RangeRequest.parse("bytes=9-9", 10)
+
+    assert_predicate result, :partial?
+    assert_equal(9..9, result.bounds)
+  end
+
   def test_multipart_range_is_full
     # `bytes=0-2,5-7` doesn't match the single-range regex; treat as absent.
     result = Wsv::RangeRequest.parse("bytes=0-2,5-7", 100)
