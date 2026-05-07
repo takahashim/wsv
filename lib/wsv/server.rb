@@ -94,10 +94,10 @@ module Wsv
     end
 
     # Reject in a separate thread so a slow client cannot block accept_loop
-    # via Connection#graceful_close (up to DRAIN_TIMEOUT seconds). In TLS mode
-    # `client` is the raw TCPSocket before any handshake; writing a plaintext
-    # 503 would corrupt the TLS handshake the client is about to start, so
-    # suppress the reply in that case.
+    # via Connection#graceful_close (up to Connection::DRAIN_TIMEOUT seconds).
+    # In TLS mode `client` is the raw TCPSocket before any handshake; writing
+    # a plaintext 503 would corrupt the TLS handshake the client is about to
+    # start, so suppress the reply in that case.
     def spawn_rejection(client)
       reply = !@ssl_context
       Thread.new do
