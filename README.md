@@ -107,6 +107,9 @@ Within that scope it tries to behave defensively:
   (default 10s, configurable). Stalled connections receive `408`.
 - Header injection — CR/LF in response header values is rejected at
   construction time, so user-derived strings cannot inject extra headers.
+- MIME sniffing — every response carries `X-Content-Type-Options: nosniff`
+  so browsers honour the declared `Content-Type` rather than guessing from
+  body contents.
 - Single-client monopolisation — connections are handled by a thread pool
   capped at `max_connections` (default 8). Excess clients receive `503`
   (or are closed without response in TLS mode, since writing plaintext over

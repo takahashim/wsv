@@ -46,6 +46,14 @@ class ResponseTest < Minitest::Test
     assert_includes io.string, "HTTP/1.1 404 Not Found"
   end
 
+  def test_write_to_emits_nosniff_header
+    response = Wsv::Response.text(200)
+    io = StringIO.new
+    response.write_to(io)
+
+    assert_includes io.string, "X-Content-Type-Options: nosniff"
+  end
+
   def test_file_response_streams_via_io_copy_stream
     Dir.mktmpdir do |dir|
       path = File.join(dir, "data.bin")
