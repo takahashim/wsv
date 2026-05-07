@@ -39,6 +39,7 @@ Options:
     --tls          Enable HTTPS (uses ~/.config/wsv/{cert,key}.pem if both present, else self-signed)
     --cert PATH    TLS certificate file (PEM); implies --tls
     --key PATH     TLS private key file (PEM); implies --tls
+    --spa          Single-page-app mode: fall back to root index.html on 404
     --help         Show help
     --version      Show version
 ```
@@ -80,6 +81,10 @@ Options:
 - Honours `If-Modified-Since` and returns `304 Not Modified` when applicable.
 - Rejects paths that resolve outside the served directory.
 - Sends `Cache-Control: no-cache` so the browser revalidates each request.
+- With `--spa`, serves the root `index.html` instead of `404` when a path
+  resolves to "not found" (so client-side routers like React Router or
+  Vue Router work). `403` and other errors are unaffected, so dotfile and
+  traversal blocks still apply.
 
 ## Security model
 

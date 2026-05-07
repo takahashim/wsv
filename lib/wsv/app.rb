@@ -10,8 +10,9 @@ module Wsv
     ALLOWED_METHODS = %w[GET HEAD].freeze
     RANGE_PATTERN = /\Abytes=(\d+)?-(\d+)?\z/
 
-    def initialize(root)
+    def initialize(root, spa: false)
       @resolver = PathResolver.new(root)
+      @spa = spa
     end
 
     def call(request)
@@ -23,6 +24,15 @@ module Wsv
 
       raw_path, query = request.target.split("?", 2)
       result = @resolver.resolve(raw_path)
+
+      # SPA fallback: when the path resolves to 404, retry with "/" so client-side
+      # routes (React Router etc.) get index.html instead of a real 404. Other
+      # error statuses (403/400) are not rewritten, so dotfile / traversal blocks
+      # still take effect.
+      if @spa && result.error? && result.status == 404
+        fallback = @resolver.resolve("/")
+        result = fallback if fallback.file?
+      end
 
       return Response.text(result.status, head: head) if result.error?
       return Response.redirect(redirect_location(raw_path, query), head: head) if result.redirect?

@@ -186,6 +186,63 @@ class AppTest < Minitest::Test
     assert_equal "3", response.headers["Content-Length"]
   end
 
+  def test_spa_fallback_serves_index_for_missing_path
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/users/123"))
+
+    assert_equal 200, response.status
+    assert_equal "<h1>SPA</h1>", response.body
+    assert_equal "text/html; charset=utf-8", response.headers["Content-Type"]
+  end
+
+  def test_spa_disabled_returns_404_for_missing_path
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+
+    response = @app.call(req("GET", "/users/123"))
+
+    assert_equal 404, response.status
+  end
+
+  def test_spa_keeps_403_for_dotfile
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    File.write(File.join(@dir, ".env"), "secret")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/.env"))
+
+    assert_equal 403, response.status
+  end
+
+  def test_spa_keeps_403_for_path_traversal
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/../etc/passwd"))
+
+    assert_equal 403, response.status
+  end
+
+  def test_spa_returns_404_when_no_index_html
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/users/123"))
+
+    assert_equal 404, response.status
+  end
+
+  def test_spa_serves_real_file_when_path_matches
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    File.write(File.join(@dir, "robots.txt"), "User-agent: *")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/robots.txt"))
+
+    assert_equal 200, response.status
+    assert_equal "User-agent: *", response.body
+  end
+
   def test_serves_single_byte_range
     File.write(File.join(@dir, "data.bin"), "abcdefghij")
 
