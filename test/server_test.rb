@@ -198,6 +198,23 @@ class ServerTest < Minitest::Test
     refute_includes err.string, "WARNING"
   end
 
+  def test_banner_brackets_ipv6_address_in_url
+    out = StringIO.new
+    server = Wsv::Server.new(host: "::1", port: 8000, root: @dir, out: out, err: StringIO.new)
+    server.send(:log_startup)
+
+    assert_includes out.string, "http://[::1]:8000/"
+    refute_includes out.string, "http://::1:8000/"
+  end
+
+  def test_banner_percent_encodes_ipv6_zone_identifier
+    out = StringIO.new
+    server = Wsv::Server.new(host: "fe80::1%eth0", port: 8000, root: @dir, out: out, err: StringIO.new)
+    server.send(:log_startup)
+
+    assert_includes out.string, "http://[fe80::1%25eth0]:8000/"
+  end
+
   def test_accept_loop_survives_transient_accept_error
     File.write(File.join(@dir, "x.txt"), "ok")
     err = StringIO.new
