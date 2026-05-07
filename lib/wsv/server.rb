@@ -166,7 +166,7 @@ module Wsv
         true
       end
 
-      return reject(client) unless accepted
+      return spawn_rejection(client) unless accepted
 
       begin
         Thread.new do
@@ -178,8 +178,19 @@ module Wsv
       rescue ThreadError => e
         @err.puts "wsv: thread error: #{e.message}"
         @mutex.synchronize { @active -= 1 }
+        spawn_rejection(client)
+      end
+    end
+
+    # Reject in a separate thread so a slow client cannot block accept_loop
+    # via graceful_close's drain_recv (up to DRAIN_TIMEOUT seconds).
+    def spawn_rejection(client)
+      Thread.new do
+        Thread.current.report_on_exception = false
         reject(client)
       end
+    rescue ThreadError
+      reject(client)
     end
 
     def maybe_wrap_tls(client)

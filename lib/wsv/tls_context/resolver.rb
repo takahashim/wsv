@@ -34,6 +34,7 @@ module Wsv
       def from_files(cert_path, key_path)
         cert = OpenSSL::X509::Certificate.new(File.read(cert_path))
         key = OpenSSL::PKey.read(File.read(key_path))
+        raise ArgumentError, "key file at #{key_path} does not contain a private key" unless key.private?
         unless cert.check_private_key(key)
           raise ArgumentError,
                 "TLS certificate at #{cert_path} does not match the key at #{key_path}"
