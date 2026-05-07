@@ -169,8 +169,7 @@ If you need any of the above, use a real production server.
 `wsv` follows [Semantic Versioning](https://semver.org/). The public API
 that SemVer covers is the CLI:
 
-- The flags listed above (`-h` / `--host`, `-p` / `--port`, `--help`,
-  `--version`) and their meanings.
+- The flags listed in Options above and their meanings.
 - The directory argument and the default behaviour when it is omitted.
 - Process exit codes (`0` for success, `1` for usage / setup errors).
 
