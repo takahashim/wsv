@@ -197,6 +197,18 @@ class AppTest < Minitest::Test
     assert_equal "text/html; charset=utf-8", response.headers["Content-Type"]
   end
 
+  def test_spa_fallback_head_serves_index_headers_without_body
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("HEAD", "/users/123"))
+
+    assert_equal 200, response.status
+    assert_equal "", response.body
+    assert_equal "text/html; charset=utf-8", response.headers["Content-Type"]
+    assert_equal "12", response.headers["Content-Length"]
+  end
+
   def test_spa_disabled_returns_404_for_missing_path
     File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
 
