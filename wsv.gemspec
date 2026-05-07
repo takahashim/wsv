@@ -26,12 +26,12 @@ Gem::Specification.new do |spec|
     "CHANGELOG.md",
     "LICENSE.txt",
     "README.md",
-    "bin/wsv",
+    "exe/wsv",
     "lib/**/*.rb",
     "test/**/*.rb",
     "wsv.gemspec"
   ]
-  spec.bindir = "bin"
+  spec.bindir = "exe"
   spec.executables = ["wsv"]
   spec.require_paths = ["lib"]
 end
