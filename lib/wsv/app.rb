@@ -4,24 +4,23 @@ require "time"
 require "uri"
 require_relative "cors"
 require_relative "path_resolver"
+require_relative "range_request"
 require_relative "response"
 
 module Wsv
   class App
     ALLOWED_METHODS = %w[GET HEAD].freeze
-    RANGE_PATTERN = /\Abytes=(\d+)?-(\d+)?\z/
 
-    def initialize(root, spa: false, cors: false)
+    def initialize(root, spa: false, cors: nil)
       @resolver = PathResolver.new(root)
       @spa = spa
-      @cors = Cors.new if cors
+      @cors = cors
     end
 
     def call(request)
       return @cors.preflight(request) if @cors && request.method == "OPTIONS"
 
-      response = build_response(request)
-      @cors ? @cors.overlay(response) : response
+      build_response(request)
     end
 
     private
@@ -30,7 +29,7 @@ module Wsv
       head = request.head?
 
       unless ALLOWED_METHODS.include?(request.method)
-        return Response.text(405, headers: { "Allow" => allow_methods }, head: head)
+        return Response.text(405, headers: { "Allow" => allow_header }, head: head)
       end
 
       raw_path, query = request.target.split("?", 2)
@@ -51,8 +50,8 @@ module Wsv
       file_response(result.file, request, head: head)
     end
 
-    def allow_methods
-      @cors ? Cors::ALLOW_METHODS : "GET, HEAD"
+    def allow_header
+      (@cors&.allow_methods || ALLOWED_METHODS).join(", ")
     end
 
     def error_response(status, head:)
@@ -69,15 +68,11 @@ module Wsv
       return Response.not_modified if not_modified?(file, request.headers["if-modified-since"])
 
       size = File.size(file)
-      range = parse_range(request.headers["range"], size)
-      case range
-      when :unsatisfiable
-        Response.range_not_satisfiable(size, head: head)
-      when nil
-        Response.file(file, head: head)
-      else
-        Response.file(file, head: head, range: range)
-      end
+      range = RangeRequest.parse(request.headers["range"], size)
+      return Response.range_not_satisfiable(size, head: head) if range.unsatisfiable?
+      return Response.file(file, head: head) if range.full?
+
+      Response.file(file, head: head, range: range.bounds)
     end
 
     def not_modified?(file, header_value)
@@ -87,45 +82,6 @@ module Wsv
       File.mtime(file).to_i <= since.to_i
     rescue ArgumentError
       false
-    end
-
-    def parse_range(header_value, file_size)
-      return nil if header_value.nil? || header_value.empty?
-
-      match = header_value.match(RANGE_PATTERN)
-      # Per RFC 7233, an unparseable Range is treated as if absent: fall
-      # through as nil so the caller serves a normal 200 instead of 416.
-      return nil unless match
-
-      first, last = match.captures
-      if first.nil? && last.nil?
-        nil
-      elsif first.nil?
-        suffix_range(last.to_i, file_size)
-      elsif last.nil?
-        open_range(first.to_i, file_size)
-      else
-        bounded_range(first.to_i, last.to_i, file_size)
-      end
-    end
-
-    def suffix_range(suffix, file_size)
-      return :unsatisfiable if suffix.zero? || file_size.zero?
-
-      [file_size - suffix, 0].max..(file_size - 1)
-    end
-
-    def open_range(first, file_size)
-      return :unsatisfiable if first >= file_size
-
-      first..(file_size - 1)
-    end
-
-    def bounded_range(first, last, file_size)
-      return :unsatisfiable if first > last || first >= file_size
-
-      last = file_size - 1 if last >= file_size
-      first..last
     end
 
     def redirect_location(raw_path, query)

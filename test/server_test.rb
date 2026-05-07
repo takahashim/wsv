@@ -164,6 +164,59 @@ class ServerTest < Minitest::Test
     socket&.close
   end
 
+  def test_408_carries_cors_header_when_cors_enabled
+    start_server(read_timeout: 0.1, cors: true)
+
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 408"
+    assert_includes response, "Access-Control-Allow-Origin: *"
+  ensure
+    socket&.close
+  end
+
+  def test_414_carries_cors_header_when_cors_enabled
+    start_server(cors: true)
+
+    long_path = "/" + ("a" * 9000)
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    socket.write("GET #{long_path} HTTP/1.1\r\nHost: localhost\r\n\r\n")
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 414"
+    assert_includes response, "Access-Control-Allow-Origin: *"
+  ensure
+    socket&.close
+  end
+
+  def test_200_carries_cors_header_when_cors_enabled
+    File.write(File.join(@dir, "x.txt"), "hi")
+    start_server(cors: true)
+
+    response = get("/x.txt")
+
+    assert_equal "200", response.code
+    assert_equal "*", response["access-control-allow-origin"]
+    assert_equal "Origin", response["vary"]
+  end
+
+  def test_options_preflight_carries_cors_headers_when_cors_enabled
+    start_server(cors: true)
+
+    socket = TCPSocket.open("127.0.0.1", @server.port)
+    socket.write("OPTIONS /x.txt HTTP/1.1\r\nHost: localhost\r\n" \
+                 "Access-Control-Request-Method: GET\r\n\r\n")
+    response = socket.read
+
+    assert_includes response, "HTTP/1.1 204"
+    assert_includes response, "Access-Control-Allow-Origin: *"
+    assert_includes response, "Access-Control-Allow-Methods: GET, HEAD, OPTIONS"
+    assert_includes response, "Vary: Origin"
+  ensure
+    socket&.close
+  end
+
   def test_slow_client_does_not_block_other_clients
     File.write(File.join(@dir, "x.txt"), "ok")
     start_server(read_timeout: 5)
@@ -312,7 +365,7 @@ class ServerTest < Minitest::Test
 
   private
 
-  def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT, tls: nil)
+  def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT, tls: nil, cors: false)
     @server = Wsv::Server.new(
       host: "127.0.0.1",
       port: free_port,
@@ -320,7 +373,8 @@ class ServerTest < Minitest::Test
       out: StringIO.new,
       err: StringIO.new,
       read_timeout: read_timeout,
-      tls: tls
+      tls: tls,
+      cors: cors
     )
     @thread = Thread.new { @server.start }
     wait_until_ready

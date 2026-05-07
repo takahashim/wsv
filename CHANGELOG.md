@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Extract `Wsv::RangeRequest` from `App`. RFC 7233 range parsing
+  (suffix / open-ended / bounded ranges, unsatisfiability) now lives
+  in its own class with a `Result` value object (`#full?` /
+  `#partial?` / `#unsatisfiable?` predicates plus `#bounds`),
+  matching the `PathResolver::Result` pattern. Behavior unchanged.
+- Make `Server::Connection` the sole place that adds CORS overlay
+  headers (`Access-Control-Allow-Origin`, `Vary`) on outgoing
+  responses. Previously `App` applied the overlay on its return
+  value, but rescue-path responses (408 / 414 / 431 / 503 / unmapped
+  400) bypassed `App` and therefore lacked CORS headers. Now every
+  response — `App`, parser errors, timeouts, and the 503 rejection —
+  gets the overlay uniformly. `Cors#preflight` no longer includes
+  ACAO/Vary itself, since Connection adds them.
+- `Wsv::App.new(... cors:)` now expects a `Wsv::Cors` instance (or
+  `nil`) instead of a Boolean. `Wsv::Server.new(... cors: true/false)`
+  is unchanged. Per the README's stability statement, the Ruby API
+  under `lib/wsv/` is implementation-only and may change in any
+  release.
+
 ## 0.10.1
 
 - Update gem description and README tagline to position wsv as
