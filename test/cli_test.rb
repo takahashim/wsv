@@ -101,6 +101,7 @@ class CLITest < Minitest::Test
       options = Wsv::CLI.new([]).parse_options(["--spa", dir])
 
       assert options[:spa]
+      assert_equal dir, options[:directory]
     end
   end
 end
