@@ -24,7 +24,8 @@ module Wsv
       tls = resolve_tls(options)
       server = Server.new(
         host: options[:host], port: options[:port], root: root,
-        out: @out, err: @err, tls: tls, spa: options[:spa] || false
+        out: @out, err: @err, tls: tls,
+        spa: options[:spa] || false, open: options[:open] || false
       )
       server.start
       0
@@ -69,6 +70,10 @@ module Wsv
 
         opts.on("--spa", "Single-page-app mode: fall back to root index.html on 404") do
           options[:spa] = true
+        end
+
+        opts.on("--open", "Open the served URL in the default browser at startup") do
+          options[:open] = true
         end
 
         opts.on("--help", "Show help") do

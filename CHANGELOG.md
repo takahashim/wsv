@@ -2,6 +2,11 @@
 
 ## 0.10.0
 
+- Add `--open` flag that launches the OS default browser at the served URL
+  on startup. Uses `open` (macOS), `xdg-open` (Linux/BSD), or `cmd /c start`
+  (Windows). Best-effort: unsupported platforms or spawn failures are logged
+  but never abort the server. Wildcard binds (`0.0.0.0`, `::`) translate to
+  the matching loopback address for the URL.
 - Custom 404 page convention: when the served directory contains a
   `404.html` file, it is served as the body of every `404 Not Found`
   response (`Content-Type: text/html`) instead of the built-in plain

@@ -104,4 +104,13 @@ class CLITest < Minitest::Test
       assert_equal dir, options[:directory]
     end
   end
+
+  def test_open_flag_parses
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options(["--open", dir])
+
+      assert options[:open]
+      assert_equal dir, options[:directory]
+    end
+  end
 end

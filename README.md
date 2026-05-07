@@ -40,6 +40,7 @@ Options:
     --cert PATH    TLS certificate file (PEM); implies --tls
     --key PATH     TLS private key file (PEM); implies --tls
     --spa          Single-page-app mode: fall back to root index.html on 404
+    --open         Open the served URL in the default browser at startup
     --help         Show help
     --version      Show version
 ```
