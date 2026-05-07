@@ -2,6 +2,11 @@
 
 ## 0.10.0
 
+- Add `--spa` flag for single-page-app routing: a request whose path resolves
+  to `404` falls back to the root `index.html` so client-side routers (React
+  Router, Vue Router, etc.) get the SPA shell instead of a real 404. `403`
+  and other errors are unaffected -- dotfile and traversal blocks still
+  apply, and existing files at the requested path are served normally.
 - Send `X-Content-Type-Options: nosniff` on every response so browsers
   honour the declared `Content-Type` instead of MIME-sniffing the body.
 - TLS / HTTPS support via Ruby's built-in `openssl` (no extra gem dependency).

@@ -95,4 +95,13 @@ class CLITest < Minitest::Test
       assert_equal "b.pem", options[:key]
     end
   end
+
+  def test_spa_flag_parses
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options(["--spa", dir])
+
+      assert options[:spa]
+      assert_equal dir, options[:directory]
+    end
+  end
 end

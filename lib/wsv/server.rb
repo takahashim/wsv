@@ -24,7 +24,8 @@ module Wsv
       err: $stderr,
       read_timeout: DEFAULT_READ_TIMEOUT,
       max_connections: DEFAULT_MAX_CONNECTIONS,
-      tls: nil
+      tls: nil,
+      spa: false
     )
       @host = host
       @port = port
@@ -35,7 +36,7 @@ module Wsv
       @max_connections = max_connections
       @tls = tls
       @ssl_context = tls&.to_ssl_context
-      @app = App.new(@root)
+      @app = App.new(@root, spa: spa)
       @running = false
       @mutex = Mutex.new
       @active = 0

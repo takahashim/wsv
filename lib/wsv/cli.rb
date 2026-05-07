@@ -24,7 +24,7 @@ module Wsv
       tls = resolve_tls(options)
       server = Server.new(
         host: options[:host], port: options[:port], root: root,
-        out: @out, err: @err, tls: tls
+        out: @out, err: @err, tls: tls, spa: options[:spa] || false
       )
       server.start
       0
@@ -44,7 +44,7 @@ module Wsv
         directory: Dir.pwd
       }
 
-      parser = OptionParser.new do |opts|
+      parser = OptionParser.new do |opts| # rubocop:disable Metrics/BlockLength
         opts.banner = "Usage: wsv [options] [directory]"
 
         opts.on("-h", "--host HOST", "Bind host (default: #{DEFAULT_HOST})") do |host|
@@ -65,6 +65,10 @@ module Wsv
 
         opts.on("--key PATH", "TLS private key file (PEM); implies --tls") do |path|
           options[:key] = path
+        end
+
+        opts.on("--spa", "Single-page-app mode: fall back to root index.html on 404") do
+          options[:spa] = true
         end
 
         opts.on("--help", "Show help") do
