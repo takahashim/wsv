@@ -34,13 +34,23 @@ module Wsv
         result = fallback if fallback.file?
       end
 
-      return Response.text(result.status, head: head) if result.error?
+      return error_response(result.status, head: head) if result.error?
       return Response.redirect(redirect_location(raw_path, query), head: head) if result.redirect?
 
       file_response(result.file, request, head: head)
     end
 
     private
+
+    def error_response(status, head:)
+      if status == 404
+        # Custom 404 page convention: when the served root contains a `404.html`
+        # file, serve it as the body of any 404 response (Content-Type: text/html).
+        custom = @resolver.resolve("/404.html")
+        return Response.file(custom.file, status: 404, head: head) if custom.file?
+      end
+      Response.text(status, head: head)
+    end
 
     def file_response(file, request, head:)
       return Response.not_modified if not_modified?(file, request.headers["if-modified-since"])
