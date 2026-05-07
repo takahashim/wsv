@@ -105,6 +105,23 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_cors_flag_parses
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options(["--cors", dir])
+
+      assert options[:cors]
+      assert_equal dir, options[:directory]
+    end
+  end
+
+  def test_cors_default_off
+    Dir.mktmpdir do |dir|
+      options = Wsv::CLI.new([]).parse_options([dir])
+
+      refute options[:cors]
+    end
+  end
+
   def test_open_flag_parses
     Dir.mktmpdir do |dir|
       options = Wsv::CLI.new([]).parse_options(["--open", dir])

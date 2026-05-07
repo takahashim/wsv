@@ -2,6 +2,14 @@
 
 ## 0.10.0
 
+- Add `--cors` flag. When set, every response carries
+  `Access-Control-Allow-Origin: *` and `Vary: Origin`, and `OPTIONS`
+  preflight requests get `204 No Content` with `Access-Control-Allow-Methods:
+  GET, HEAD, OPTIONS` (echoing `Access-Control-Request-Headers` when
+  present). Unblocks browser fetches from a frontend served on a different
+  port (or a Service Worker) during local development. Matches the `--cors`
+  convention used by `http-server`, `serve`, and `live-server`. Without the
+  flag, no CORS headers are added and `OPTIONS` continues to return `405`.
 - Add `--open` flag that launches the OS default browser at the served URL
   on startup. Uses `open` (macOS), `xdg-open` (Linux/BSD), or `cmd /c start`
   (Windows). Best-effort: unsupported platforms or spawn failures are logged

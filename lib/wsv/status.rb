@@ -4,6 +4,7 @@ module Wsv
   module Status
     REASONS = {
       200 => "OK",
+      204 => "No Content",
       206 => "Partial Content",
       301 => "Moved Permanently",
       304 => "Not Modified",
