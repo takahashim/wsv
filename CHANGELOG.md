@@ -2,6 +2,8 @@
 
 ## 0.10.0
 
+- Send `X-Content-Type-Options: nosniff` on every response so browsers
+  honour the declared `Content-Type` instead of MIME-sniffing the body.
 - TLS / HTTPS support via Ruby's built-in `openssl` (no extra gem dependency).
   - `--tls` enables HTTPS. Without `--cert / --key`, wsv looks for
     `~/.config/wsv/cert.pem` and `~/.config/wsv/key.pem` (respecting
