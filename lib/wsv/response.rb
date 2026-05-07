@@ -35,7 +35,9 @@ module Wsv
       io.write "HTTP/1.1 #{status} #{reason}\r\n"
       io.write "Server: #{SERVER_NAME}\r\n"
       io.write "Connection: close\r\n"
-      io.write "X-Content-Type-Options: nosniff\r\n"
+      unless headers.any? { |name, _value| name.to_s.casecmp?("X-Content-Type-Options") }
+        io.write "X-Content-Type-Options: nosniff\r\n"
+      end
       headers.each { |name, value| io.write "#{name}: #{value}\r\n" }
       io.write "\r\n"
       @body.write_to(io)
