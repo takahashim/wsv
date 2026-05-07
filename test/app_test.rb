@@ -337,50 +337,34 @@ class AppTest < Minitest::Test
     assert_equal "bytes", response.headers["Accept-Ranges"]
   end
 
-  def test_cors_disabled_omits_acao_header
+  # CORS overlay (Access-Control-Allow-Origin / Vary) is applied by
+  # Server::Connection, not by App. App only short-circuits OPTIONS preflight
+  # and adds OPTIONS to the Allow header. End-to-end CORS behavior is covered
+  # by server_test.rb.
+
+  def test_app_does_not_add_cors_headers_directly
     File.write(File.join(@dir, "x.txt"), "hi")
-
-    response = @app.call(req("GET", "/x.txt"))
-
-    refute response.headers.key?("Access-Control-Allow-Origin")
-  end
-
-  def test_cors_adds_acao_to_successful_response
-    File.write(File.join(@dir, "x.txt"), "hi")
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
+    cors_app = Wsv::App.new(File.realpath(@dir), cors: Wsv::Cors.new)
 
     response = cors_app.call(req("GET", "/x.txt"))
 
-    assert_equal 200, response.status
-    assert_equal "hi", response.body
-    assert_equal "*", response.headers["Access-Control-Allow-Origin"]
-    assert_equal "Origin", response.headers["Vary"]
-  end
-
-  def test_cors_adds_acao_to_error_response
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
-
-    response = cors_app.call(req("GET", "/missing.txt"))
-
-    assert_equal 404, response.status
-    assert_equal "*", response.headers["Access-Control-Allow-Origin"]
+    refute response.headers.key?("Access-Control-Allow-Origin")
+    refute response.headers.key?("Vary")
   end
 
   def test_cors_preflight_returns_204_with_methods_and_max_age
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
+    cors_app = Wsv::App.new(File.realpath(@dir), cors: Wsv::Cors.new)
 
     response = cors_app.call(req("OPTIONS", "/x.txt"))
 
     assert_equal 204, response.status
-    assert_equal "*", response.headers["Access-Control-Allow-Origin"]
     assert_equal "GET, HEAD, OPTIONS", response.headers["Access-Control-Allow-Methods"]
     assert_equal "86400", response.headers["Access-Control-Max-Age"]
-    assert_equal "Origin", response.headers["Vary"]
     assert_equal "", response.body
   end
 
   def test_cors_preflight_echoes_requested_headers
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
+    cors_app = Wsv::App.new(File.realpath(@dir), cors: Wsv::Cors.new)
 
     response = cors_app.call(req("OPTIONS", "/x.txt", "access-control-request-headers" => "X-Custom, Authorization"))
 
@@ -389,7 +373,7 @@ class AppTest < Minitest::Test
   end
 
   def test_cors_preflight_omits_allow_headers_when_not_requested
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
+    cors_app = Wsv::App.new(File.realpath(@dir), cors: Wsv::Cors.new)
 
     response = cors_app.call(req("OPTIONS", "/x.txt"))
 
@@ -404,13 +388,12 @@ class AppTest < Minitest::Test
   end
 
   def test_cors_405_advertises_options_in_allow
-    cors_app = Wsv::App.new(File.realpath(@dir), cors: true)
+    cors_app = Wsv::App.new(File.realpath(@dir), cors: Wsv::Cors.new)
 
     response = cors_app.call(req("POST", "/x.txt"))
 
     assert_equal 405, response.status
     assert_equal "GET, HEAD, OPTIONS", response.headers["Allow"]
-    assert_equal "*", response.headers["Access-Control-Allow-Origin"]
   end
 
   def test_multipart_range_falls_through_to_200

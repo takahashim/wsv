@@ -13,9 +13,10 @@ module Wsv
     class Connection
       DRAIN_TIMEOUT = 5
 
-      def initialize(client, err:)
+      def initialize(client, err:, cors: nil)
         @client = client
         @err = err
+        @cors = cors
       end
 
       def serve(app, read_timeout:)
@@ -50,12 +51,19 @@ module Wsv
 
       private
 
+      # Connection is the sole place that adds ACAO / Vary headers, so every
+      # response (App, parser errors, timeouts, the 503 rejection) gets them
+      # uniformly when CORS is enabled.
       def write(response)
         return if @client.closed?
 
-        response.write_to(@client)
+        finalize(response).write_to(@client)
       rescue Errno::EPIPE, Errno::ECONNRESET, IOError
         nil
+      end
+
+      def finalize(response)
+        @cors ? @cors.overlay(response) : response
       end
 
       def graceful_close
