@@ -13,6 +13,14 @@ class PathResolverTest < Minitest::Test
     FileUtils.remove_entry(@dir)
   end
 
+  def test_empty_path_returns_redirect
+    # `""` has no trailing slash → resolver returns redirect the same
+    # way it would for `/somedir` when `somedir` is a directory.
+    result = @resolver.resolve("")
+
+    assert_predicate result, :redirect?
+  end
+
   def test_resolves_existing_file
     path = File.join(@dir, "hello.txt")
     File.write(path, "hi")

@@ -62,6 +62,14 @@ class CLITest < Minitest::Test
     assert_includes err.string, "port must be between 1 and 65535"
   end
 
+  def test_port_above_max_rejected
+    err = StringIO.new
+    code = Wsv::CLI.new(["-p", "65536"], err: err).run
+
+    assert_equal 1, code
+    assert_includes err.string, "port must be between 1 and 65535"
+  end
+
   def test_missing_directory
     err = StringIO.new
     missing = File.join(Dir.tmpdir, "wsv-missing-#{Time.now.to_i}-#{$$}")
@@ -86,6 +94,19 @@ class CLITest < Minitest::Test
 
       assert_equal 1, code
       assert_includes err.string, "must be provided together"
+    end
+  end
+
+  def test_missing_cert_file_errors_at_runtime
+    err = StringIO.new
+    Dir.mktmpdir do |dir|
+      missing_cert = File.join(dir, "missing-cert.pem")
+      missing_key = File.join(dir, "missing-key.pem")
+      code = Wsv::CLI.new(["--cert", missing_cert, "--key", missing_key, dir], err: err).run
+
+      assert_equal 1, code
+      assert_includes err.string, "wsv:"
+      assert_includes err.string, "missing-cert.pem"
     end
   end
 
