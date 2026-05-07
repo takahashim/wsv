@@ -6,6 +6,7 @@ require_relative "app"
 require_relative "request"
 require_relative "response"
 require_relative "server/banner"
+require_relative "server/browser_launcher"
 require_relative "server/deadline_reader"
 
 module Wsv
@@ -25,7 +26,8 @@ module Wsv
       read_timeout: DEFAULT_READ_TIMEOUT,
       max_connections: DEFAULT_MAX_CONNECTIONS,
       tls: nil,
-      spa: false
+      spa: false,
+      open: false
     )
       @host = host
       @port = port
@@ -36,6 +38,7 @@ module Wsv
       @max_connections = max_connections
       @tls = tls
       @ssl_context = tls&.to_ssl_context
+      @open = open
       @app = App.new(@root, spa: spa)
       @running = false
       @mutex = Mutex.new
@@ -47,6 +50,7 @@ module Wsv
       @running = true
       log_startup
       trap_signals
+      open_in_browser if @open
       accept_loop
     ensure
       close
@@ -235,6 +239,10 @@ module Wsv
 
     def log_startup
       Banner.new(host: host, port: port, root: root, out: @out, err: @err, tls: @tls).emit
+    end
+
+    def open_in_browser
+      BrowserLauncher.new(host: host, port: port, tls: @tls, err: @err).launch
     end
   end
 end
