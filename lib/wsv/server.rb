@@ -5,6 +5,8 @@ require "socket"
 require_relative "app"
 require_relative "request"
 require_relative "response"
+require_relative "server/banner"
+require_relative "server/deadline_reader"
 
 module Wsv
   class Server
@@ -117,21 +119,6 @@ module Wsv
       end
     end
 
-    class DeadlineReader
-      def initialize(io, deadline)
-        @io = io
-        @deadline = deadline
-      end
-
-      def gets(eol, limit)
-        remaining = @deadline - Time.now
-        raise IO::TimeoutError if remaining <= 0
-
-        @io.to_io.timeout = remaining
-        @io.gets(eol, limit)
-      end
-    end
-
     def accept_loop
       while @running
         client = nil
@@ -238,34 +225,7 @@ module Wsv
     end
 
     def log_startup
-      @out.puts "Serving: #{root}"
-      @out.puts "Bind:    #{url_for(host)}"
-      @out.puts "Local:   #{url_for('127.0.0.1')}" unless localhost?(host)
-      @out.puts "Stop:    Ctrl-C"
-      warn_public_bind unless localhost?(host)
-      warn_ephemeral_cert if @tls&.ephemeral?
-    end
-
-    def warn_public_bind
-      @err.puts "WARNING: binding to #{host} exposes #{root} on your network."
-      @err.puts "         Pass --host 127.0.0.1 (or omit --host) for local-only access."
-    end
-
-    def warn_ephemeral_cert
-      @err.puts "WARNING: serving with a self-signed certificate. Browsers will"
-      @err.puts "         show a security warning. Pass --cert / --key for a real cert."
-    end
-
-    def url_for(display_host)
-      "#{scheme}://#{display_host}:#{port}/"
-    end
-
-    def scheme
-      @tls ? "https" : "http"
-    end
-
-    def localhost?(display_host)
-      ["127.0.0.1", "localhost", "::1"].include?(display_host)
+      Banner.new(host: host, port: port, root: root, out: @out, err: @err, tls: @tls).emit
     end
   end
 end
