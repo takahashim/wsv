@@ -1,22 +1,27 @@
 # wsv
 
-`wsv` is a zero-dependency static preview server for Ruby projects.
+`wsv` is a zero-dependency static preview server for Ruby projects. Defensive by design: blocks dotfiles and binds to loopback by default.
 
-It has no runtime dependencies outside Ruby's standard library. Run `wsv` in a directory and it serves that directory over HTTP.
+It has no runtime dependencies outside Ruby's standard library. Run `wsv` in a directory and it serves that directory over HTTP/HTTPS.
 
 Requires Ruby 3.2 or later.
 
 ## Installation
 
-```sh
-gem install wsv
+Add to your Gemfile:
+
+```ruby
+group :development do
+  gem "wsv"
+end
 ```
 
-For local development:
+Then run `bundle install` and start with `bundle exec wsv`.
+
+Or install globally:
 
 ```sh
-gem build wsv.gemspec
-gem install ./wsv-*.gem
+gem install wsv
 ```
 
 ## Usage
@@ -55,10 +60,10 @@ Options:
 
 `--tls` enables HTTPS on the chosen `--port`. Three modes:
 
-1. **Ephemeral self-signed** — `wsv --tls` with no cert configured: wsv
+1. Ephemeral self-signed: `wsv --tls` with no cert configured: wsv
    generates an in-memory self-signed certificate. Browsers will show a
    security warning; click through "Advanced → Proceed" once per session.
-2. **`~/.config/wsv/` auto-detection (recommended)** — if both
+2. `~/.config/wsv/` auto-detection (recommended): if both
    `~/.config/wsv/cert.pem` and `~/.config/wsv/key.pem` exist (resolved via
    `$XDG_CONFIG_HOME` if set), `--tls` uses them. If only one of the two
    files is present, wsv refuses to start so the misconfiguration does not
@@ -75,7 +80,7 @@ Options:
    wsv --tls           # → https://localhost:8000/ with no warning
    ```
 
-3. **Explicit cert/key files** — `wsv --cert path/to/cert.pem --key path/to/key.pem`
+3. Explicit cert/key files: `wsv --cert path/to/cert.pem --key path/to/key.pem`
    for project-specific certificates. Both flags must be provided together.
 
 ## Behavior
@@ -103,7 +108,9 @@ Options:
 
 ## Security model
 
-`wsv` is intended for **local development previews, not for production or internet-facing use**.
+> [!WARNING]
+> `wsv` is intended for local development previews, not for production or internet-facing use.
+
 Within that scope it tries to behave defensively:
 
 ### What `wsv` protects against
