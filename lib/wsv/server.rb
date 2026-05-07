@@ -3,17 +3,15 @@
 require "openssl"
 require "socket"
 require_relative "app"
-require_relative "request"
-require_relative "response"
 require_relative "server/banner"
 require_relative "server/browser_launcher"
-require_relative "server/deadline_reader"
+require_relative "server/connection"
+require_relative "server/connection_throttle"
 
 module Wsv
   class Server
     DEFAULT_READ_TIMEOUT = 10
     DEFAULT_MAX_CONNECTIONS = 8
-    DRAIN_TIMEOUT = 5
 
     attr_reader :host, :port, :root
 
@@ -36,14 +34,12 @@ module Wsv
       @out = out
       @err = err
       @read_timeout = read_timeout
-      @max_connections = max_connections
       @tls = tls
       @ssl_context = tls&.to_ssl_context
       @open = open
       @app = App.new(@root, spa: spa, cors: cors)
+      @throttle = ConnectionThrottle.new(max: max_connections, err: err)
       @running = false
-      @mutex = Mutex.new
-      @active = 0
     end
 
     def start
@@ -62,73 +58,7 @@ module Wsv
       close
     end
 
-    def handle(client)
-      reader = DeadlineReader.new(client, Time.now + @read_timeout)
-      request = Request.parse(reader)
-      case request
-      when :empty
-        nil
-      when :malformed
-        write_response(client, Response.text(400))
-      else
-        write_response(client, @app.call(request))
-      end
-    rescue Request::TooLarge => e
-      write_response(client, Response.text(e.status_code))
-    rescue IO::TimeoutError
-      write_response(client, Response.text(408))
-    rescue StandardError => e
-      # Treat unmapped failures as connection-scoped and close with 400 rather
-      # than letting one bad request path bring down the server.
-      @err.puts "wsv: #{e.class}: #{e.message}"
-      write_response(client, Response.text(400))
-    ensure
-      graceful_close(client)
-    end
-
     private
-
-    def write_response(client, response)
-      return if client.closed?
-
-      response.write_to(client)
-    rescue Errno::EPIPE, Errno::ECONNRESET, IOError
-      nil
-    end
-
-    def graceful_close(client)
-      return if client.closed?
-
-      drain_recv(client)
-    rescue StandardError
-      nil
-    ensure
-      begin
-        client.close unless client.closed?
-      rescue StandardError
-        nil
-      end
-    end
-
-    def drain_recv(client)
-      deadline = Time.now + DRAIN_TIMEOUT
-      loop do
-        return if Time.now >= deadline
-
-        chunk = client.read_nonblock(8192, exception: false)
-        case chunk
-        when nil, :wait_writable
-          # nil = EOF. :wait_writable can come back from SSLSocket during a
-          # renegotiation (read needs an underlying write). Either way,
-          # there's nothing more we can usefully drain right now.
-          return
-        when :wait_readable
-          remaining = deadline - Time.now
-          return if remaining <= 0
-          return unless client.wait_readable([remaining, 0.2].min)
-        end
-      end
-    end
 
     def accept_loop
       while @running
@@ -157,38 +87,25 @@ module Wsv
     end
 
     def spawn_handler(client)
-      accepted = @mutex.synchronize do
-        next false if @active >= @max_connections
-
-        @active += 1
-        true
+      accepted = @throttle.try_spawn do
+        Connection.new(maybe_wrap_tls(client), err: @err).serve(@app, read_timeout: @read_timeout)
       end
-
-      return spawn_rejection(client) unless accepted
-
-      begin
-        Thread.new do
-          Thread.current.report_on_exception = false
-          handle(maybe_wrap_tls(client))
-        ensure
-          @mutex.synchronize { @active -= 1 }
-        end
-      rescue ThreadError => e
-        @err.puts "wsv: thread error: #{e.message}"
-        @mutex.synchronize { @active -= 1 }
-        spawn_rejection(client)
-      end
+      spawn_rejection(client) unless accepted
     end
 
     # Reject in a separate thread so a slow client cannot block accept_loop
-    # via graceful_close's drain_recv (up to DRAIN_TIMEOUT seconds).
+    # via Connection#graceful_close (up to Connection::DRAIN_TIMEOUT seconds).
+    # In TLS mode `client` is the raw TCPSocket before any handshake; writing
+    # a plaintext 503 would corrupt the TLS handshake the client is about to
+    # start, so suppress the reply in that case.
     def spawn_rejection(client)
+      reply = !@ssl_context
       Thread.new do
         Thread.current.report_on_exception = false
-        reject(client)
+        Connection.new(client, err: @err).reject(reply: reply)
       end
     rescue ThreadError
-      reject(client)
+      Connection.new(client, err: @err).reject(reply: reply)
     end
 
     def maybe_wrap_tls(client)
@@ -200,7 +117,7 @@ module Wsv
       ssl.accept
       ssl
     rescue StandardError
-      # If wrapping or the handshake failed, `handle` is never called and
+      # If wrapping or the handshake failed, `serve` is never called and
       # its ensure does not get a chance to close the underlying socket.
       # Close it here so we do not leak a TCPSocket per failed handshake.
       begin
@@ -209,15 +126,6 @@ module Wsv
         nil
       end
       raise
-    end
-
-    def reject(client)
-      # In TLS mode `client` is the raw TCPSocket before any handshake.
-      # Writing a plaintext 503 over it would corrupt the TLS handshake
-      # the client is about to start, so just close in that case.
-      write_response(client, Response.text(503)) unless @ssl_context
-    ensure
-      graceful_close(client)
     end
 
     def close
