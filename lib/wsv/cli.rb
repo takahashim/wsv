@@ -55,7 +55,7 @@ module Wsv
           options[:port] = validate_port(port)
         end
 
-        opts.on("--tls", "Enable HTTPS (uses ~/.config/wsv/cert.pem if present, else self-signed)") do
+        opts.on("--tls", "Enable HTTPS (uses ~/.config/wsv/{cert,key}.pem if both present, else self-signed)") do
           options[:tls] = true
         end
 
@@ -105,6 +105,8 @@ module Wsv
       return nil unless options[:tls] || options[:cert] || options[:key]
 
       TlsContext::Resolver.resolve(cert_path: options[:cert], key_path: options[:key])
+    rescue OpenSSL::OpenSSLError => e
+      raise ArgumentError, "TLS configuration error: #{e.message}"
     end
   end
 end

@@ -110,6 +110,43 @@ class TlsContextResolverTest < Minitest::Test
     end
   end
 
+  def test_raises_openssl_error_for_malformed_cert
+    Dir.mktmpdir do |dir|
+      _cert_path, key_path = write_self_signed(dir)
+      bad_cert = File.join(dir, "bad-cert.pem")
+      File.write(bad_cert, "this is not a PEM\n")
+
+      assert_raises(OpenSSL::X509::CertificateError) do
+        Wsv::TlsContext::Resolver.resolve(cert_path: bad_cert, key_path: key_path)
+      end
+    end
+  end
+
+  def test_raises_openssl_error_for_malformed_key
+    Dir.mktmpdir do |dir|
+      cert_path, _key_path = write_self_signed(dir)
+      bad_key = File.join(dir, "bad-key.pem")
+      File.write(bad_key, "this is not a PEM\n")
+
+      assert_raises(OpenSSL::PKey::PKeyError) do
+        Wsv::TlsContext::Resolver.resolve(cert_path: cert_path, key_path: bad_key)
+      end
+    end
+  end
+
+  def test_raises_argument_error_when_cert_and_key_do_not_match
+    Dir.mktmpdir do |dir|
+      cert_path, = write_self_signed(dir, cert_name: "a.pem", key_name: "a.key")
+      _, foreign_key = write_self_signed(dir, cert_name: "b.pem", key_name: "b.key")
+
+      err = assert_raises(ArgumentError) do
+        Wsv::TlsContext::Resolver.resolve(cert_path: cert_path, key_path: foreign_key)
+      end
+
+      assert_includes err.message, "does not match"
+    end
+  end
+
   private
 
   def write_self_signed(dir, cert_name: "test-cert.pem", key_name: "test-key.pem")

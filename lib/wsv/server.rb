@@ -5,6 +5,8 @@ require "socket"
 require_relative "app"
 require_relative "request"
 require_relative "response"
+require_relative "server/banner"
+require_relative "server/deadline_reader"
 
 module Wsv
   class Server
@@ -117,21 +119,6 @@ module Wsv
       end
     end
 
-    class DeadlineReader
-      def initialize(io, deadline)
-        @io = io
-        @deadline = deadline
-      end
-
-      def gets(eol, limit)
-        remaining = @deadline - Time.now
-        raise IO::TimeoutError if remaining <= 0
-
-        @io.to_io.timeout = remaining
-        @io.gets(eol, limit)
-      end
-    end
-
     def accept_loop
       while @running
         client = nil
@@ -166,7 +153,7 @@ module Wsv
         true
       end
 
-      return reject(client) unless accepted
+      return spawn_rejection(client) unless accepted
 
       begin
         Thread.new do
@@ -178,8 +165,19 @@ module Wsv
       rescue ThreadError => e
         @err.puts "wsv: thread error: #{e.message}"
         @mutex.synchronize { @active -= 1 }
+        spawn_rejection(client)
+      end
+    end
+
+    # Reject in a separate thread so a slow client cannot block accept_loop
+    # via graceful_close's drain_recv (up to DRAIN_TIMEOUT seconds).
+    def spawn_rejection(client)
+      Thread.new do
+        Thread.current.report_on_exception = false
         reject(client)
       end
+    rescue ThreadError
+      reject(client)
     end
 
     def maybe_wrap_tls(client)
@@ -190,10 +188,23 @@ module Wsv
       ssl.sync_close = true
       ssl.accept
       ssl
+    rescue StandardError
+      # If wrapping or the handshake failed, `handle` is never called and
+      # its ensure does not get a chance to close the underlying socket.
+      # Close it here so we do not leak a TCPSocket per failed handshake.
+      begin
+        client.close
+      rescue StandardError
+        nil
+      end
+      raise
     end
 
     def reject(client)
-      write_response(client, Response.text(503))
+      # In TLS mode `client` is the raw TCPSocket before any handshake.
+      # Writing a plaintext 503 over it would corrupt the TLS handshake
+      # the client is about to start, so just close in that case.
+      write_response(client, Response.text(503)) unless @ssl_context
     ensure
       graceful_close(client)
     end
@@ -214,34 +225,7 @@ module Wsv
     end
 
     def log_startup
-      @out.puts "Serving: #{root}"
-      @out.puts "Bind:    #{url_for(host)}"
-      @out.puts "Local:   #{url_for('127.0.0.1')}" unless localhost?(host)
-      @out.puts "Stop:    Ctrl-C"
-      warn_public_bind unless localhost?(host)
-      warn_ephemeral_cert if @tls&.ephemeral?
-    end
-
-    def warn_public_bind
-      @err.puts "WARNING: binding to #{host} exposes #{root} on your network."
-      @err.puts "         Pass --host 127.0.0.1 (or omit --host) for local-only access."
-    end
-
-    def warn_ephemeral_cert
-      @err.puts "WARNING: serving with a self-signed certificate. Browsers will"
-      @err.puts "         show a security warning. Pass --cert / --key for a real cert."
-    end
-
-    def url_for(display_host)
-      "#{scheme}://#{display_host}:#{port}/"
-    end
-
-    def scheme
-      @tls ? "https" : "http"
-    end
-
-    def localhost?(display_host)
-      ["127.0.0.1", "localhost", "::1"].include?(display_host)
+      Banner.new(host: host, port: port, root: root, out: @out, err: @err, tls: @tls).emit
     end
   end
 end
