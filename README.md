@@ -1,8 +1,10 @@
 # wsv
 
-`wsv` is a minimal static web server for local previews.
+`wsv` is a zero-dependency static preview server for Ruby projects.
 
 It has no runtime dependencies outside Ruby's standard library. Run `wsv` in a directory and it serves that directory over HTTP.
+
+Requires Ruby 3.2 or later.
 
 ## Installation
 
@@ -14,7 +16,7 @@ For local development:
 
 ```sh
 gem build wsv.gemspec
-gem install ./wsv-0.1.0.gem
+gem install ./wsv-*.gem
 ```
 
 ## Usage
@@ -26,8 +28,11 @@ wsv [options] [directory]
 Examples:
 
 ```sh
-wsv
-wsv public
+wsv                       # serve current directory
+wsv _site                 # Jekyll / Bridgetown output
+wsv build                 # Astro / Hugo output
+wsv --spa dist            # Vite / esbuild / webpack SPA output
+wsv --tls --open          # HTTPS, open browser at startup
 wsv -h 0.0.0.0 -p 3000 ./dist
 ```
 
@@ -166,11 +171,9 @@ Within a major version, `wsv` will not silently change the default bind
 host, default port, the dotfile-blocking rule, or the security posture in
 ways that would surprise an existing user.
 
-The Ruby classes inside `lib/wsv/` (`Wsv::Server`, `Wsv::App`,
-`Wsv::PathResolver`, `Wsv::Request`, `Wsv::Response`, `Wsv::MimeTypes`,
-`Wsv::Status`) are implementation details. They may change at any
-time, including in patch releases. If you want to embed `wsv` as a
-library, pin a specific version.
+The Ruby classes inside `lib/wsv/` are implementation details. They may
+change in any release, including patches. Pin the gem version if you
+embed `wsv` as a library.
 
 ## License
 
