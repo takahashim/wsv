@@ -42,6 +42,8 @@ class CLITest < Minitest::Test
     assert_equal 0, code
     assert_includes out.string, "Usage: wsv"
     assert_includes out.string, "--host HOST"
+    assert_includes out.string, "Examples:"
+    assert_includes out.string, "wsv _site"
   end
 
   def test_version

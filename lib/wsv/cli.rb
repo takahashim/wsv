@@ -90,6 +90,14 @@ module Wsv
           @out.puts Wsv::VERSION
           options[:handled] = true
         end
+
+        opts.separator ""
+        opts.separator "Examples:"
+        opts.separator "    wsv                  # serve current dir"
+        opts.separator "    wsv _site            # Jekyll / Bridgetown output"
+        opts.separator "    wsv build            # Astro / Hugo output"
+        opts.separator "    wsv --spa dist       # Vite / esbuild / webpack SPA output"
+        opts.separator "    wsv --tls --open     # HTTPS, open browser"
       end
 
       parser.parse!(args)
