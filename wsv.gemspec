@@ -9,7 +9,9 @@ Gem::Specification.new do |spec|
   spec.email = ["takahashimm@gmail.com"]
 
   spec.summary = "A zero-dependency static preview server for Ruby projects."
-  spec.description = "wsv is a Ruby CLI that previews a directory over HTTP/HTTPS. Stdlib-only, no runtime dependencies. Defensive by design: blocks dotfiles, binds to loopback, ships with TLS and CORS."
+  spec.description = "wsv is a Ruby CLI that previews a directory over HTTP/HTTPS. " \
+                     "Stdlib-only, no runtime dependencies. Defensive by design: " \
+                     "blocks dotfiles, binds to loopback, ships with TLS and CORS."
   spec.homepage = "https://github.com/takahashim/wsv"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
