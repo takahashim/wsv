@@ -72,6 +72,8 @@ module Wsv
     rescue IO::TimeoutError
       write_response(client, Response.text(408))
     rescue StandardError => e
+      # Treat unmapped failures as connection-scoped and close with 400 rather
+      # than letting one bad request path bring down the server.
       @err.puts "wsv: #{e.class}: #{e.message}"
       write_response(client, Response.text(400))
     ensure
@@ -110,6 +112,9 @@ module Wsv
         chunk = client.read_nonblock(8192, exception: false)
         case chunk
         when nil, :wait_writable
+          # nil = EOF. :wait_writable can come back from SSLSocket during a
+          # renegotiation (read needs an underlying write). Either way,
+          # there's nothing more we can usefully drain right now.
           return
         when :wait_readable
           remaining = deadline - Time.now
@@ -221,6 +226,9 @@ module Wsv
         end
       end
     rescue ArgumentError
+      # Signal.trap raises ArgumentError when called from a context that
+      # cannot install signal handlers (e.g. embedded in a non-main thread,
+      # which is how tests start the server). Skip silently in that case.
       nil
     end
 

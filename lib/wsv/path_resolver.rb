@@ -50,6 +50,12 @@ module Wsv
       decoded = decode(raw_path)
       return Result.error(400) unless decoded
 
+      # Layered defense:
+      #   1. URL-level: reject `..` traversal and dotfile segments before
+      #      touching the filesystem.
+      #   2. realpath-level: re-check after symlinks resolve, so an internal
+      #      symlink cannot smuggle access to outside-root paths or to
+      #      `.git/` / `.env` etc. via a non-dotfile-looking URL.
       relative = decoded.sub(%r{\A/+}, "")
       return Result.error(403) if hidden_segment?(relative)
 

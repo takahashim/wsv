@@ -60,6 +60,8 @@ module Wsv
       return nil if header_value.nil? || header_value.empty?
 
       match = header_value.match(RANGE_PATTERN)
+      # Per RFC 7233, an unparseable Range is treated as if absent: fall
+      # through as nil so the caller serves a normal 200 instead of 416.
       return nil unless match
 
       first, last = match.captures
