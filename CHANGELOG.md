@@ -10,6 +10,11 @@
   is now `Server::Connection` (`#serve` / `#reject` + safe write /
   drain / close), concurrency cap is `Server::ConnectionThrottle`
   (`#try_spawn`). Behavior unchanged.
+- Extract `Server::UrlHost.format` so `Banner` and `BrowserLauncher`
+  share the IPv6 bracketing / RFC 6874 zone-id encoding rule (was
+  duplicated in two places, fixed in tandem once already).
+- Simplify `Response::FileBuilder` body construction: the HEAD guard
+  and range/full body branch collapse into a single method.
 - Move executable from `bin/wsv` to `exe/wsv` per Bundler convention.
 - Various README polish: Gemfile install path first, Examples for
   Jekyll / Astro / Vite, GHFM `> [!WARNING]` for the prod-use caveat.

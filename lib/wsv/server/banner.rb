@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "url_host"
+
 module Wsv
   class Server
     # Renders the startup announcement (the "Serving / Bind / Local / Stop"
@@ -36,12 +38,7 @@ module Wsv
       end
 
       def url_for(display_host)
-        "#{scheme}://#{format_host(display_host)}:#{@port}/"
-      end
-
-      def format_host(host)
-        # Bracket IPv6 literals per RFC 3986; zone IDs (`%eth0` etc.) need %25 per RFC 6874.
-        host.include?(":") ? "[#{host.gsub('%', '%25')}]" : host
+        "#{scheme}://#{UrlHost.format(display_host)}:#{@port}/"
       end
 
       def scheme

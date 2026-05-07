@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "rbconfig"
+require_relative "url_host"
 
 module Wsv
   class Server
@@ -32,14 +33,7 @@ module Wsv
 
       def url
         scheme = @tls ? "https" : "http"
-        "#{scheme}://#{url_host}:#{@port}/"
-      end
-
-      def url_host
-        host = display_host
-        # IPv6 literals must be bracketed in URLs per RFC 3986. Scoped IPv6
-        # zone identifiers use `%`, which must be percent-encoded in URLs.
-        host.include?(":") ? "[#{host.gsub('%', '%25')}]" : host
+        "#{scheme}://#{UrlHost.format(display_host)}:#{@port}/"
       end
 
       def display_host
