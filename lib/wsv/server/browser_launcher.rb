@@ -37,8 +37,9 @@ module Wsv
 
       def url_host
         host = display_host
-        # IPv6 literals must be bracketed in URLs per RFC 3986.
-        host.include?(":") ? "[#{host}]" : host
+        # IPv6 literals must be bracketed in URLs per RFC 3986. Scoped IPv6
+        # zone identifiers use `%`, which must be percent-encoded in URLs.
+        host.include?(":") ? "[#{host.gsub("%", "%25")}]" : host
       end
 
       def display_host
