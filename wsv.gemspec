@@ -8,15 +8,14 @@ Gem::Specification.new do |spec|
   spec.authors = ["takahashim"]
   spec.email = ["takahashimm@gmail.com"]
 
-  spec.summary = "A tiny static web server for local previews."
-  spec.description = "wsv serves a local directory over HTTP from a zero-config CLI."
-  spec.homepage = "https://rubygems.org/gems/wsv"
+  spec.summary = "A zero-dependency static preview server for Ruby projects."
+  spec.description = "wsv is a Ruby CLI that previews a directory over HTTP/HTTPS. Stdlib-only, no runtime dependencies. Defensive by design: blocks dotfiles, binds to loopback, ships with TLS and CORS."
+  spec.homepage = "https://github.com/takahashim/wsv"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
 
   spec.metadata = {
     "homepage_uri" => spec.homepage,
-    "source_code_uri" => "https://github.com/takahashim/wsv",
     "changelog_uri" => "https://github.com/takahashim/wsv/blob/main/CHANGELOG.md",
     "rubygems_mfa_required" => "true"
   }
