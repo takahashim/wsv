@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.1
+
+- Update gem description and README tagline to position wsv as
+  "Defensive by design" — surfaces the actual security defaults on
+  RubyGems.org and `gem search` (the 0.10.0 description still said
+  "tiny static web server").
+- Refactor `Wsv::Server` (~250 → 150 lines): per-connection lifecycle
+  is now `Server::Connection` (`#serve` / `#reject` + safe write /
+  drain / close), concurrency cap is `Server::ConnectionThrottle`
+  (`#try_spawn`). Behavior unchanged.
+- Move executable from `bin/wsv` to `exe/wsv` per Bundler convention.
+- Various README polish: Gemfile install path first, Examples for
+  Jekyll / Astro / Vite, GHFM `> [!WARNING]` for the prod-use caveat.
+
 ## 0.10.0
 
 - Add `--cors` flag. When set, every response carries
