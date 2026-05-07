@@ -108,14 +108,16 @@ Within that scope it tries to behave defensively:
 - Header injection — CR/LF in response header values is rejected at
   construction time, so user-derived strings cannot inject extra headers.
 - Single-client monopolisation — connections are handled by a thread pool
-  capped at `max_connections` (default 8). Excess clients receive `503`.
+  capped at `max_connections` (default 8). Excess clients receive `503`
+  (or are closed without response in TLS mode, since writing plaintext over
+  a half-handshaked TLS socket would corrupt the client's view of the
+  protocol).
 - Transient `accept(2)` errors — per-connection failures (`ECONNABORTED`,
   `EMFILE`, etc.) are logged and skipped instead of killing the server.
 
 ### What `wsv` does NOT do
 
 - Authentication, authorization, or rate limiting.
-- TLS / HTTPS.
 - HTTP keep-alive (each response sets `Connection: close`).
 - ETags / `If-None-Match`.
 - Production-grade DoS resistance under hostile network load.
