@@ -31,6 +31,12 @@ module Wsv
       Status.reason(status)
     end
 
+    # Returns a new Response with `extra` merged into the headers, sharing the
+    # same body object so streaming (FileBody) is preserved.
+    def with_headers(extra)
+      self.class.new(status: @status, headers: @headers.merge(extra), body: @body)
+    end
+
     def write_to(io)
       io.write "HTTP/1.1 #{status} #{reason}\r\n"
       io.write "Server: #{SERVER_NAME}\r\n"

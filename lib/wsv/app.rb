@@ -2,6 +2,7 @@
 
 require "time"
 require "uri"
+require_relative "cors"
 require_relative "path_resolver"
 require_relative "response"
 
@@ -10,16 +11,26 @@ module Wsv
     ALLOWED_METHODS = %w[GET HEAD].freeze
     RANGE_PATTERN = /\Abytes=(\d+)?-(\d+)?\z/
 
-    def initialize(root, spa: false)
+    def initialize(root, spa: false, cors: false)
       @resolver = PathResolver.new(root)
       @spa = spa
+      @cors = Cors.new if cors
     end
 
     def call(request)
+      return @cors.preflight(request) if @cors && request.method == "OPTIONS"
+
+      response = build_response(request)
+      @cors ? @cors.overlay(response) : response
+    end
+
+    private
+
+    def build_response(request)
       head = request.head?
 
       unless ALLOWED_METHODS.include?(request.method)
-        return Response.text(405, headers: { "Allow" => "GET, HEAD" }, head: head)
+        return Response.text(405, headers: { "Allow" => allow_methods }, head: head)
       end
 
       raw_path, query = request.target.split("?", 2)
@@ -40,7 +51,9 @@ module Wsv
       file_response(result.file, request, head: head)
     end
 
-    private
+    def allow_methods
+      @cors ? Cors::ALLOW_METHODS : "GET, HEAD"
+    end
 
     def error_response(status, head:)
       if status == 404

@@ -25,7 +25,8 @@ module Wsv
       server = Server.new(
         host: options[:host], port: options[:port], root: root,
         out: @out, err: @err, tls: tls,
-        spa: options[:spa] || false, open: options[:open] || false
+        spa: options[:spa] || false, open: options[:open] || false,
+        cors: options[:cors] || false
       )
       server.start
       0
@@ -74,6 +75,10 @@ module Wsv
 
         opts.on("--open", "Open the served URL in the default browser at startup") do
           options[:open] = true
+        end
+
+        opts.on("--cors", "Send Access-Control-Allow-Origin: * on every response") do
+          options[:cors] = true
         end
 
         opts.on("--help", "Show help") do

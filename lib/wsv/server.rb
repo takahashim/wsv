@@ -27,7 +27,8 @@ module Wsv
       max_connections: DEFAULT_MAX_CONNECTIONS,
       tls: nil,
       spa: false,
-      open: false
+      open: false,
+      cors: false
     )
       @host = host
       @port = port
@@ -39,7 +40,7 @@ module Wsv
       @tls = tls
       @ssl_context = tls&.to_ssl_context
       @open = open
-      @app = App.new(@root, spa: spa)
+      @app = App.new(@root, spa: spa, cors: cors)
       @running = false
       @mutex = Mutex.new
       @active = 0

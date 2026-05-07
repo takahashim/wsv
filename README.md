@@ -41,6 +41,7 @@ Options:
     --key PATH     TLS private key file (PEM); implies --tls
     --spa          Single-page-app mode: fall back to root index.html on 404
     --open         Open the served URL in the default browser at startup
+    --cors         Send Access-Control-Allow-Origin: * on every response
     --help         Show help
     --version      Show version
 ```
@@ -90,6 +91,10 @@ Options:
   body of every `404 Not Found` response (with `Content-Type: text/html`)
   instead of the built-in plain text. Matches the convention of Jekyll,
   Hugo, and many static hosts.
+- With `--cors`, every response carries `Access-Control-Allow-Origin: *`
+  (and `Vary: Origin`), and `OPTIONS` preflight requests get `204 No Content`
+  with the matching CORS headers. Lets a frontend on a different port (or a
+  Service Worker) fetch assets from `wsv` during local development.
 
 ## Security model
 
