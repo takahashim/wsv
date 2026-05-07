@@ -36,7 +36,12 @@ module Wsv
       end
 
       def url_for(display_host)
-        "#{scheme}://#{display_host}:#{@port}/"
+        "#{scheme}://#{format_host(display_host)}:#{@port}/"
+      end
+
+      def format_host(host)
+        # Bracket IPv6 literals per RFC 3986; zone IDs (`%eth0` etc.) need %25 per RFC 6874.
+        host.include?(":") ? "[#{host.gsub('%', '%25')}]" : host
       end
 
       def scheme
