@@ -5,7 +5,7 @@ require_relative "test_helper"
 class BannerTest < Minitest::Test
   include TlsTestHelpers
 
-  ROOT = "/tmp"
+  ROOT = Dir.tmpdir
 
   def test_warns_when_binding_to_non_loopback
     err = StringIO.new
