@@ -5,6 +5,8 @@ require "socket"
 require_relative "test_helper"
 
 class ServerTest < Minitest::Test
+  include TlsTestHelpers
+
   def setup
     @dir = Dir.mktmpdir
     @server = nil
@@ -234,40 +236,6 @@ class ServerTest < Minitest::Test
     slow_socket&.close
   end
 
-  def test_warns_when_binding_to_non_loopback
-    err = StringIO.new
-    server = Wsv::Server.new(host: "0.0.0.0", port: 0, root: @dir, out: StringIO.new, err: err)
-    server.send(:log_startup)
-
-    assert_includes err.string, "WARNING"
-    assert_includes err.string, "0.0.0.0"
-  end
-
-  def test_no_warning_for_loopback_bind
-    err = StringIO.new
-    server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir, out: StringIO.new, err: err)
-    server.send(:log_startup)
-
-    refute_includes err.string, "WARNING"
-  end
-
-  def test_banner_brackets_ipv6_address_in_url
-    out = StringIO.new
-    server = Wsv::Server.new(host: "::1", port: 8000, root: @dir, out: out, err: StringIO.new)
-    server.send(:log_startup)
-
-    assert_includes out.string, "http://[::1]:8000/"
-    refute_includes out.string, "http://::1:8000/"
-  end
-
-  def test_banner_percent_encodes_ipv6_zone_identifier
-    out = StringIO.new
-    server = Wsv::Server.new(host: "fe80::1%eth0", port: 8000, root: @dir, out: out, err: StringIO.new)
-    server.send(:log_startup)
-
-    assert_includes out.string, "http://[fe80::1%25eth0]:8000/"
-  end
-
   def test_accept_loop_survives_transient_accept_error
     File.write(File.join(@dir, "x.txt"), "ok")
     err = StringIO.new
@@ -325,7 +293,7 @@ class ServerTest < Minitest::Test
 
   def test_serves_over_tls
     File.write(File.join(@dir, "x.txt"), "secret")
-    start_server(tls: build_ephemeral_tls)
+    start_server(tls: ephemeral_tls)
 
     response = Net::HTTP.start("127.0.0.1", @server.port, use_ssl: true,
                                                           verify_mode: OpenSSL::SSL::VERIFY_NONE) do |http|
@@ -334,24 +302,6 @@ class ServerTest < Minitest::Test
 
     assert_equal "200", response.code
     assert_equal "secret", response.body
-  end
-
-  def test_logs_https_scheme_when_tls_enabled
-    out = StringIO.new
-    @server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir,
-                              out: out, err: StringIO.new, tls: build_ephemeral_tls)
-    @server.send(:log_startup)
-
-    assert_includes out.string, "https://"
-  end
-
-  def test_warns_about_self_signed_cert
-    err = StringIO.new
-    @server = Wsv::Server.new(host: "127.0.0.1", port: 0, root: @dir,
-                              out: StringIO.new, err: err, tls: build_ephemeral_tls)
-    @server.send(:log_startup)
-
-    assert_includes err.string, "self-signed"
   end
 
   def test_unsupported_method
@@ -380,31 +330,23 @@ class ServerTest < Minitest::Test
     wait_until_ready
   end
 
+  # Wrap accept_loop so the very first call to @server.accept raises a
+  # transient error. Avoids redefining Server#start, which would silently
+  # drift if start grew new steps (open_in_browser, etc.).
   def inject_one_accept_error(server, error_class)
+    original_accept_loop = server.method(:accept_loop)
     fired = false
-    server.define_singleton_method(:start) do
-      @server = TCPServer.new(host, port)
-      original = @server.method(:accept)
+    server.define_singleton_method(:accept_loop) do
+      original_accept = @server.method(:accept)
       @server.define_singleton_method(:accept) do
         unless fired
           fired = true
           raise error_class, "injected"
         end
-        original.call
+        original_accept.call
       end
-      @running = true
-      log_startup
-      trap_signals
-      accept_loop
-    ensure
-      close
+      original_accept_loop.call
     end
-  end
-
-  def build_ephemeral_tls
-    key = OpenSSL::PKey::RSA.new(2048)
-    cert = Wsv::TlsContext::SelfSignedCert.build(key)
-    Wsv::TlsContext.new(cert: cert, key: key, ephemeral: true)
   end
 
   def free_port
