@@ -122,6 +122,7 @@ Within that scope it tries to behave defensively:
 
 - Authentication, authorization, or rate limiting.
 - HTTP keep-alive (each response sets `Connection: close`).
+- HTTP/2. Use Caddy / nginx as a front proxy if you need it.
 - ETags / `If-None-Match`.
 - Production-grade DoS resistance under hostile network load.
 - Defend against TOCTOU attacks from other local processes that can write
