@@ -255,6 +255,55 @@ class AppTest < Minitest::Test
     assert_equal "User-agent: *", response.body
   end
 
+  def test_custom_404_page_when_404_html_exists
+    File.write(File.join(@dir, "404.html"), "<h1>not found</h1>")
+
+    response = @app.call(req("GET", "/missing.txt"))
+
+    assert_equal 404, response.status
+    assert_equal "<h1>not found</h1>", response.body
+    assert_equal "text/html; charset=utf-8", response.headers["Content-Type"]
+  end
+
+  def test_no_custom_404_falls_back_to_plain_text
+    response = @app.call(req("GET", "/missing.txt"))
+
+    assert_equal 404, response.status
+    assert_includes response.body, "404 Not Found"
+    assert_equal "text/plain; charset=utf-8", response.headers["Content-Type"]
+  end
+
+  def test_custom_404_does_not_apply_to_403
+    File.write(File.join(@dir, "404.html"), "<h1>not found</h1>")
+    File.write(File.join(@dir, ".env"), "secret")
+
+    response = @app.call(req("GET", "/.env"))
+
+    assert_equal 403, response.status
+    refute_includes response.body, "<h1>not found</h1>"
+  end
+
+  def test_spa_mode_takes_precedence_over_custom_404
+    File.write(File.join(@dir, "index.html"), "<h1>SPA</h1>")
+    File.write(File.join(@dir, "404.html"), "<h1>not found</h1>")
+    spa_app = Wsv::App.new(File.realpath(@dir), spa: true)
+
+    response = spa_app.call(req("GET", "/users/123"))
+
+    assert_equal 200, response.status
+    assert_equal "<h1>SPA</h1>", response.body
+  end
+
+  def test_custom_404_works_with_head
+    File.write(File.join(@dir, "404.html"), "<h1>not found</h1>")
+
+    response = @app.call(req("HEAD", "/missing.txt"))
+
+    assert_equal 404, response.status
+    assert_equal "", response.body
+    assert_equal "text/html; charset=utf-8", response.headers["Content-Type"]
+  end
+
   def test_serves_single_byte_range
     File.write(File.join(@dir, "data.bin"), "abcdefghij")
 

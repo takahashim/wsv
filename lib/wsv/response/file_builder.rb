@@ -6,17 +6,18 @@ require_relative "../mime_types"
 module Wsv
   class Response
     class FileBuilder
-      def initialize(path, head: false, range: nil)
+      def initialize(path, head: false, range: nil, status: 200)
         @path = path
         @head = head
         @range = range
+        @status = status
       end
 
       def build
         if @range
           Response.new(status: 206, headers: range_headers, body: range_body)
         else
-          Response.new(status: 200, headers: full_headers, body: full_body)
+          Response.new(status: @status, headers: full_headers, body: full_body)
         end
       end
 

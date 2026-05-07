@@ -2,6 +2,11 @@
 
 ## 0.10.0
 
+- Custom 404 page convention: when the served directory contains a
+  `404.html` file, it is served as the body of every `404 Not Found`
+  response (`Content-Type: text/html`) instead of the built-in plain
+  text. Matches Jekyll / Hugo / Netlify behaviour. `403` and other
+  error statuses are not rewritten.
 - Add `--spa` flag for single-page-app routing: a request whose path resolves
   to `404` falls back to the root `index.html` so client-side routers (React
   Router, Vue Router, etc.) get the SPA shell instead of a real 404. `403`

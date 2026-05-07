@@ -85,6 +85,10 @@ Options:
   resolves to "not found" (so client-side routers like React Router or
   Vue Router work). `403` and other errors are unaffected, so dotfile and
   traversal blocks still apply.
+- If the served directory contains a `404.html` file, it is served as the
+  body of every `404 Not Found` response (with `Content-Type: text/html`)
+  instead of the built-in plain text. Matches the convention of Jekyll,
+  Hugo, and many static hosts.
 
 ## Security model
 
