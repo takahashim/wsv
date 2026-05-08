@@ -27,7 +27,8 @@ module Wsv
       tls: nil,
       spa: false,
       open: false,
-      cors: false
+      cors: false,
+      quiet: false
     )
       @host = host
       @port = port
@@ -39,6 +40,7 @@ module Wsv
       @ssl_context = tls&.to_ssl_context
       @open = open
       @cors = Cors.new if cors
+      @access_log = quiet ? NullAccessLog.new : AccessLog.new(out: out)
       @app = App.new(@root, spa: spa, cors: @cors)
       @throttle = ConnectionThrottle.new(max: max_connections, err: err)
       @running = false
@@ -90,7 +92,8 @@ module Wsv
 
     def spawn_handler(client)
       accepted = @throttle.try_spawn do
-        Connection.new(maybe_wrap_tls(client), err: @err, cors: @cors).serve(@app, read_timeout: @read_timeout)
+        Connection.new(maybe_wrap_tls(client), err: @err, cors: @cors, access_log: @access_log)
+                  .serve(@app, read_timeout: @read_timeout)
       end
       spawn_rejection(client) unless accepted
     end
@@ -104,10 +107,10 @@ module Wsv
       reply = !@ssl_context
       Thread.new do
         Thread.current.report_on_exception = false
-        Connection.new(client, err: @err, cors: @cors).reject(reply: reply)
+        Connection.new(client, err: @err, cors: @cors, access_log: @access_log).reject(reply: reply)
       end
     rescue ThreadError
-      Connection.new(client, err: @err, cors: @cors).reject(reply: reply)
+      Connection.new(client, err: @err, cors: @cors, access_log: @access_log).reject(reply: reply)
     end
 
     def maybe_wrap_tls(client)

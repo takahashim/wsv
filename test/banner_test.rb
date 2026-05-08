@@ -22,6 +22,21 @@ class BannerTest < Minitest::Test
     refute_includes err.string, "WARNING"
   end
 
+  def test_warns_when_binding_to_ipv6_wildcard
+    err = StringIO.new
+    build(host: "::", err: err).emit
+
+    assert_includes err.string, "WARNING"
+    assert_includes err.string, "::"
+  end
+
+  def test_no_warning_for_ipv6_loopback
+    err = StringIO.new
+    build(host: "::1", err: err).emit
+
+    refute_includes err.string, "WARNING"
+  end
+
   def test_brackets_ipv6_address_in_url
     out = StringIO.new
     build(host: "::1", port: 8000, out: out).emit

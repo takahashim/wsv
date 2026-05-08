@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Per-request access log on stdout in Common Log Format
+  (`host - - [date] "method target version" status bytes`). Matches the
+  default behavior of `python -m http.server`, `http-server`, `serve`,
+  `live-server`, `miniserve`, `darkhttpd`, `puma`, `rails server`, and
+  WEBrick. Pass `-q` / `--quiet` to suppress. Concurrent connections share
+  a mutex so log lines never interleave. Control chars, quotes, and
+  backslashes in the request line are escaped as `\xNN` to prevent log
+  injection from a hostile client.
+- **Breaking (CLI):** `-h` is now `--help` instead of `--host`, matching the
+  Unix convention used by every other static / dev server (Python's
+  `http.server`, Jekyll, Rails, Puma, `http-server`, `serve`, miniserve,
+  Hugo, Caddy). Use `--host` (long form only) to set the bind address.
+- `--host` accepts bare IPv6 addresses (`--host ::1`) as before, and now
+  also accepts the bracketed form (`--host '[::1]'`) so values copy-pasted
+  from a URL bar do not produce a cryptic `getaddrinfo` error. Zone
+  identifiers are preserved (`[fe80::1%en0]` → `fe80::1%en0`). The combined
+  `[host]:port` form is rejected with a clear error: pass the port via
+  `-p` / `--port`.
+
 ## 0.11.0
 
 - Extract `Wsv::RangeRequest` from `App`. RFC 7233 range parsing

@@ -27,6 +27,10 @@ module Wsv
       @body.to_s
     end
 
+    def bytesize
+      @body.bytesize
+    end
+
     def reason
       Status.reason(status)
     end

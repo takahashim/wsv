@@ -26,7 +26,8 @@ module Wsv
         host: options[:host], port: options[:port], root: root,
         out: @out, err: @err, tls: tls,
         spa: options[:spa] || false, open: options[:open] || false,
-        cors: options[:cors] || false
+        cors: options[:cors] || false,
+        quiet: options[:quiet] || false
       )
       server.start
       0
@@ -49,8 +50,8 @@ module Wsv
       parser = OptionParser.new do |opts| # rubocop:disable Metrics/BlockLength
         opts.banner = "Usage: wsv [options] [directory]"
 
-        opts.on("-h", "--host HOST", "Bind host (default: #{DEFAULT_HOST})") do |host|
-          options[:host] = host
+        opts.on("--host HOST", "Bind host (default: #{DEFAULT_HOST})") do |host|
+          options[:host] = normalize_host(host)
         end
 
         opts.on("-p", "--port PORT", Integer, "Bind port (default: #{DEFAULT_PORT})") do |port|
@@ -81,7 +82,11 @@ module Wsv
           options[:cors] = true
         end
 
-        opts.on("--help", "Show help") do
+        opts.on("-q", "--quiet", "Suppress per-request access log") do
+          options[:quiet] = true
+        end
+
+        opts.on("-h", "--help", "Show help") do
           @out.puts opts
           options[:handled] = true
         end
@@ -121,6 +126,21 @@ module Wsv
       raise ArgumentError, "port must be between 1 and 65535" unless port.between?(1, 65_535)
 
       port
+    end
+
+    # Accept bracketed IPv6 input as a courtesy (e.g. `--host '[::1]'`)
+    # so users who copy-pasted from a URL bar do not see a cryptic
+    # getaddrinfo error. The combined `[::1]:8000` form is rejected
+    # explicitly: wsv takes host and port via separate flags.
+    def normalize_host(host)
+      return host unless host.start_with?("[")
+      raise ArgumentError, "--host must not include a port; pass it via -p / --port" if host.match?(/\]:\d+\z/)
+      raise ArgumentError, "--host has unbalanced brackets: #{host}" unless host.end_with?("]")
+
+      inner = host[1..-2]
+      raise ArgumentError, "--host bracket value is empty" if inner.empty?
+
+      inner
     end
 
     def resolve_tls(options)

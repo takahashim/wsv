@@ -17,12 +17,20 @@ class CLITest < Minitest::Test
 
   def test_host_port_and_directory
     Dir.mktmpdir do |dir|
-      options = Wsv::CLI.new([]).parse_options(["-h", "127.0.0.1", "-p", "3000", dir])
+      options = Wsv::CLI.new([]).parse_options(["--host", "127.0.0.1", "-p", "3000", dir])
 
       assert_equal "127.0.0.1", options[:host]
       assert_equal 3000, options[:port]
       assert_equal dir, options[:directory]
     end
+  end
+
+  def test_short_help_flag
+    out = StringIO.new
+    code = Wsv::CLI.new(["-h"], out: out).run
+
+    assert_equal 0, code
+    assert_includes out.string, "Usage: wsv"
   end
 
   def test_long_host_port_and_directory
@@ -33,6 +41,48 @@ class CLITest < Minitest::Test
       assert_equal 4567, options[:port]
       assert_equal dir, options[:directory]
     end
+  end
+
+  def test_bare_ipv6_host
+    options = Wsv::CLI.new([]).parse_options(["--host", "::1"])
+
+    assert_equal "::1", options[:host]
+  end
+
+  def test_bracketed_ipv6_host_is_unwrapped
+    options = Wsv::CLI.new([]).parse_options(["--host", "[::1]"])
+
+    assert_equal "::1", options[:host]
+  end
+
+  def test_bracketed_ipv6_with_zone_id
+    options = Wsv::CLI.new([]).parse_options(["--host", "[fe80::1%en0]"])
+
+    assert_equal "fe80::1%en0", options[:host]
+  end
+
+  def test_host_with_port_suffix_rejected
+    err = StringIO.new
+    code = Wsv::CLI.new(["--host", "[::1]:8000"], err: err).run
+
+    assert_equal 1, code
+    assert_includes err.string, "must not include a port"
+  end
+
+  def test_host_unbalanced_brackets_rejected
+    err = StringIO.new
+    code = Wsv::CLI.new(["--host", "[::1"], err: err).run
+
+    assert_equal 1, code
+    assert_includes err.string, "unbalanced brackets"
+  end
+
+  def test_host_empty_brackets_rejected
+    err = StringIO.new
+    code = Wsv::CLI.new(["--host", "[]"], err: err).run
+
+    assert_equal 1, code
+    assert_includes err.string, "bracket value is empty"
   end
 
   def test_help

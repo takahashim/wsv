@@ -38,13 +38,13 @@ wsv _site                 # Jekyll / Bridgetown output
 wsv build                 # Astro / Hugo output
 wsv --spa dist            # Vite / esbuild / webpack SPA output
 wsv --tls --open          # HTTPS, open browser at startup
-wsv -h 0.0.0.0 -p 3000 ./dist
+wsv --host 0.0.0.0 -p 3000 ./dist
 ```
 
 Options:
 
 ```text
--h, --host HOST    Bind host (default: 127.0.0.1)
+    --host HOST    Bind host (default: 127.0.0.1; accepts IPv6 as `::1` or `[::1]`)
 -p, --port PORT    Bind port (default: 8000)
     --tls          Enable HTTPS (uses ~/.config/wsv/{cert,key}.pem if both present, else self-signed)
     --cert PATH    TLS certificate file (PEM); implies --tls
@@ -52,7 +52,8 @@ Options:
     --spa          Single-page-app mode: fall back to root index.html on 404
     --open         Open the served URL in the default browser at startup
     --cors         Send Access-Control-Allow-Origin: * on every response
-    --help         Show help
+-q, --quiet        Suppress per-request access log
+-h, --help         Show help
     --version      Show version
 ```
 
@@ -105,6 +106,11 @@ Options:
   (and `Vary: Origin`), and `OPTIONS` preflight requests get `204 No Content`
   with the matching CORS headers. Lets a frontend on a different port (or a
   Service Worker) fetch assets from `wsv` during local development.
+- One Common Log Format line per request is written to stdout
+  (`127.0.0.1 - - [10/Oct/2000:13:55:36 +0900] "GET / HTTP/1.1" 200 1234`).
+  Pass `--quiet` (or `-q`) to suppress. Errors and warnings still go to
+  stderr regardless. Control characters and quotes in the request line are
+  escaped as `\xNN` so a hostile client cannot inject log lines.
 
 ## Security model
 

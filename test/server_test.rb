@@ -313,6 +313,32 @@ class ServerTest < Minitest::Test
     assert_includes response, "Allow: GET, HEAD"
   end
 
+  def test_emits_access_log_by_default
+    File.write(File.join(@dir, "ok.txt"), "hello")
+    out = StringIO.new
+    @server = Wsv::Server.new(host: "127.0.0.1", port: free_port, root: @dir, out: out, err: StringIO.new)
+    @thread = Thread.new { @server.start }
+    wait_until_ready
+
+    get("/ok.txt")
+
+    assert_includes out.string, %("GET /ok.txt HTTP/1.1" 200 5)
+  end
+
+  def test_quiet_suppresses_access_log
+    File.write(File.join(@dir, "ok.txt"), "hello")
+    out = StringIO.new
+    @server = Wsv::Server.new(host: "127.0.0.1", port: free_port, root: @dir,
+                              out: out, err: StringIO.new, quiet: true)
+    @thread = Thread.new { @server.start }
+    wait_until_ready
+    baseline = out.string.dup
+
+    get("/ok.txt")
+
+    assert_equal baseline, out.string
+  end
+
   private
 
   def start_server(read_timeout: Wsv::Server::DEFAULT_READ_TIMEOUT, tls: nil, cors: false)
