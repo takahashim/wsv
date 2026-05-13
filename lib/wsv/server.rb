@@ -77,6 +77,15 @@ module Wsv
           next
         end
 
+        # Disable Nagle so small writes (SSE frames, headers) are not held
+        # in the TCP send buffer waiting for an ACK. Applies before any TLS
+        # wrap; NODELAY is a TCP-layer option that persists through SSL.
+        begin
+          client.setsockopt(:TCP, :NODELAY, 1)
+        rescue StandardError
+          nil
+        end
+
         begin
           spawn_handler(client)
         rescue StandardError => e
