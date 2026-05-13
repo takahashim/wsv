@@ -4,8 +4,10 @@ require_relative "status"
 require_relative "version"
 require_relative "response/string_body"
 require_relative "response/file_body"
+require_relative "response/sse_body"
 require_relative "response/text_builder"
 require_relative "response/file_builder"
+require_relative "response/sse_builder"
 
 module Wsv
   class Response
@@ -71,6 +73,12 @@ module Wsv
 
     def self.range_not_satisfiable(file_size, head: false)
       TextBuilder.new(416, head: head, headers: { "Content-Range" => "bytes */#{file_size}" }).build
+    end
+
+    # Build a Server-Sent Events response. The block receives the client
+    # socket and writes (and flushes) SSE frames until it returns.
+    def self.sse(status: 200, headers: {}, &producer)
+      SseBuilder.new(status: status, headers: headers, &producer).build
     end
 
     private

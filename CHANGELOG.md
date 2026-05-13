@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add `Wsv::Response.sse { |io| ... }` for custom `app:` handlers that
+  need Server-Sent Events or other streaming responses without a
+  precomputed `Content-Length`. The helper emits
+  `Content-Type: text/event-stream; charset=utf-8`,
+  `Cache-Control: no-cache`, and `X-Accel-Buffering: no`, writes
+  chunks directly to the client socket, and ends the response when the
+  block returns.
 - Per-request access log on stdout in Common Log Format
   (`host - - [date] "method target version" status bytes`). Matches the
   default behavior of `python -m http.server`, `http-server`, `serve`,
