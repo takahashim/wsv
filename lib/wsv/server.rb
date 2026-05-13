@@ -28,7 +28,8 @@ module Wsv
       spa: false,
       open: false,
       cors: false,
-      quiet: false
+      quiet: false,
+      app: nil
     )
       @host = host
       @port = port
@@ -41,7 +42,9 @@ module Wsv
       @open = open
       @cors = Cors.new if cors
       @access_log = quiet ? NullAccessLog.new : AccessLog.new(out: out)
-      @app = App.new(@root, spa: spa, cors: @cors)
+      # `app:` lets callers plug in a custom request handler in place of
+      # the default file server.
+      @app = app || App.new(@root, spa: spa, cors: @cors)
       @throttle = ConnectionThrottle.new(max: max_connections, err: err)
       @running = false
     end
