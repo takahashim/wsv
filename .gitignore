@@ -20,3 +20,4 @@
 *.swp
 *.swo
 .DS_Store
+.rubocop_cache/

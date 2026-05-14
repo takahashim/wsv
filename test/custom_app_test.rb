@@ -34,6 +34,7 @@ class CustomAppTest < Minitest::Test
 
     start_server(app: app)
     response = get("/anything")
+
     assert_equal "200", response.code
     assert_equal "from-app", response.body
   end
@@ -53,9 +54,10 @@ class CustomAppTest < Minitest::Test
 
     start_server(app: app)
     body = read_full_body("/events")
+
     chunks.each { |c| assert_includes body, c }
-    assert body.index(chunks[0]) < body.index(chunks[1])
-    assert body.index(chunks[1]) < body.index(chunks[2])
+    assert_operator body.index(chunks[0]), :<, body.index(chunks[1])
+    assert_operator body.index(chunks[1]), :<, body.index(chunks[2])
   end
 
   def test_sse_response_uses_event_stream_content_type
@@ -67,6 +69,7 @@ class CustomAppTest < Minitest::Test
 
     start_server(app: app)
     response = get("/stream")
+
     assert_equal "200", response.code
     assert_match %r{text/event-stream}, response["content-type"]
     refute response["content-length"], "sse must not advertise Content-Length"
