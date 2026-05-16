@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
 
+- Add `Wsv::Server.new(... app:)` so callers can plug a custom request
+  handler in place of the default static file server. Any object whose
+  `#call(request)` returns a `Wsv::Response` works; the surrounding
+  connection / throttling / access-log / CORS / TLS machinery is reused.
 - Add `Wsv::Response.sse { |io| ... }` for custom `app:` handlers that
   need Server-Sent Events or other streaming responses without a
   precomputed `Content-Length`. The helper emits
@@ -9,6 +13,10 @@
   `Cache-Control: no-cache`, and `X-Accel-Buffering: no`, writes
   chunks directly to the client socket, and ends the response when the
   block returns.
+- Enable `TCP_NODELAY` on accepted client sockets so small writes (SSE
+  frames, response headers) are flushed immediately instead of waiting in
+  the kernel send buffer for a Nagle ACK. Set before any TLS wrap; NODELAY
+  is a TCP-layer option that persists through SSL.
 - Per-request access log on stdout in Common Log Format
   (`host - - [date] "method target version" status bytes`). Matches the
   default behavior of `python -m http.server`, `http-server`, `serve`,
